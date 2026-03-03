@@ -49,7 +49,8 @@ public:
 
 int main() {
 	cout << "mcc v0.0.0\n";
-	Network::Socket socket;
+	Network net;
+	net::Socket socket;
 	socket.winInit();
 	
 	return 0;
