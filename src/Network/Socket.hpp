@@ -12,6 +12,10 @@ private:
     SOCKET mainSocket = INVALID_SOCKET;
 
 public:
+	int pInit();
+	int pBind();
+	int pListen();
+
     int winInit();
 	int winBind();
 	int winListen();
