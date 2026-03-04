@@ -12,7 +12,7 @@ Logger log;
 
 int main() {
 	log.raw("mcc v0.0.0");
-	Network::Socket socket;
+	Socket socket;
 	socket.winInit();
 	
 	return 0;
