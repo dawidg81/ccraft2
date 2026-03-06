@@ -1,3 +1,0 @@
-#include <thread>
-
-#pragma once
