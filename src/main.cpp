@@ -3,8 +3,7 @@
 
 #include <winsock.h>
 
-#define NET_SOCK_ADDR "0.0.0.0"
-#define NET_SOCK_PORT 25565
+bool running = false;
 
 using namespace std;
 
@@ -14,7 +13,12 @@ int main() {
 	log.raw("mcc v0.0.0");
 	Socket socket;
 	socket.winInit();
-	
+	socket.winBind();
+	running = true;
+	while(running){
+		socket.winListen();
+	}
+
 	return 0;
 }
 

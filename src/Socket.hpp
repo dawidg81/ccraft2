@@ -16,7 +16,7 @@ public:
 	int pBind();
 	int pListen();
 
-    int winInit();
+	int winInit();
 	int winBind();
 	int winListen();
 };

@@ -31,21 +31,22 @@ int Socket::winInit()
 int Socket::winBind()
 {
 	if (bind(mainSocket, (SOCKADDR*)&service, sizeof(service)) == SOCKET_ERROR) {
-        log.err("Network.Socket.winInit: Bind failed: " + std::to_string(WSAGetLastError()));
-        closesocket(mainSocket);
-        return 1;
-    }
+		log.err("Network.Socket.winInit: Bind failed: " + std::to_string(WSAGetLastError()));
+		closesocket(mainSocket);
+
+		return 1;
+	}
 	return 0;
 }
 
 int Socket::winListen()
 {
 	if (listen(mainSocket, SOMAXCONN) == SOCKET_ERROR) {
-        log.err("Network.Socket.winInit: Listen failed: " + std::to_string(WSAGetLastError()));
-        closesocket(mainSocket);
-        return 1;
-    }
+		log.err("Network.Socket.winInit: Listen failed: " + std::to_string(WSAGetLastError()));
+		closesocket(mainSocket);
+		return 1;
+	}
 
-    log.info("Network.Socket.winInit: Listening on " + std::string(NET_SOCK_ADDR) + ":" + std::to_string(NET_SOCK_PORT));
+	log.info("Network.Socket.winInit: Listening on " + std::string(NET_SOCK_ADDR) + ":" + std::to_string(NET_SOCK_PORT));
 	return 0;
 }
