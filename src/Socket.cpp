@@ -50,7 +50,7 @@ int Socket::winListen()
 	return 0;
 }
 
-int Socket::winAccept(){
+SOCKET Socket::winAccept(){
 	while(Socket::running){
 		SOCKET clientSocket = accept(mainSocket, NULL, NULL);
 		if(clientSocket == INVALID_SOCKET){
@@ -58,8 +58,6 @@ int Socket::winAccept(){
 			continue;
 		}
 		log.info("Client connected");
-		// handling client starts here
-		closesocket(clientSocket);
+		return clientSocket;
 	}
-	return 0;
 }

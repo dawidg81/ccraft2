@@ -22,5 +22,5 @@ public:
 	int winInit();
 	int winBind();
 	int winListen();
-	int winAccept();
+	SOCKET winAccept();
 };
