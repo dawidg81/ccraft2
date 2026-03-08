@@ -12,6 +12,8 @@ private:
 	SOCKET mainSocket = INVALID_SOCKET;
 
 public:
+	bool running = false;
+
 	int pInit();
 	int pBind();
 	int pListen();

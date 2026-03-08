@@ -51,11 +51,14 @@ int Socket::winListen()
 }
 
 int Socket::winAccept(){
-	SOCKET clientSocket = accept(socket.mainSocket, NULL, NULL);
-	if(clientSocket == INVALID_SOCKET){
-		log.err("Accept failed: " + std::to_string(WSAGetLastError()));
-		continue;
+	while(Socket::running){
+		SOCKET clientSocket = accept(mainSocket, NULL, NULL);
+		if(clientSocket == INVALID_SOCKET){
+			log.err("Accept failed: " + std::to_string(WSAGetLastError()));
+			continue;
+		}
+		log.info("Client connected");
+		closesocket(clientSocket);
 	}
-	log.info("Client connected");
-	closesocket(clientSocket);
+	return 0;
 }
