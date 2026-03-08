@@ -1,6 +1,7 @@
 #include "Logger.hpp"
 #include "Socket.hpp"
 
+#include <winsock.h>
 #include <winsock2.h>
 
 using namespace std;
@@ -24,7 +25,8 @@ int main() {
 		 * 2. Parse bytes from packet
 		 * 3. Put into components understandable for server
 		 */
-		uint8_t buffer[131] = recv(clientSocket, buffer, sizeof(buffer), 0);
+		char buffer[131] = {};
+		buffer[0] = recv(clientSocket, buffer, sizeof(buffer), 0);
 	}
 
 	return 0;
