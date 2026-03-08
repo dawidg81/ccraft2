@@ -4,8 +4,6 @@
 #include <winsock.h>
 #include <thread>
 
-bool running = false;
-
 using namespace std;
 
 Logger log;
