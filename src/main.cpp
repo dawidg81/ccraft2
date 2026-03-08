@@ -20,10 +20,11 @@ int main() {
 		SOCKET clientSocket = socket.winAccept();
 		if(clientSocket == INVALID_SOCKET) continue;
 		/*
+		 * This is where client handling starts.
 		 * RECEIVING CLIENT PACKET
-		 * 1. Receive raw bytes
-		 * 2. Parse bytes from packet
-		 * 3. Put into components understandable for server
+		 * 1. Receive raw bytes,
+		 * 2. Parse bytes from packet,
+		 * 3. Put into components understandable for server.
 		 */
 		char buffer[131] = {};
 		buffer[0] = recv(clientSocket, buffer, sizeof(buffer), 0);
