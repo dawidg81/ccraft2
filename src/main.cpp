@@ -2,6 +2,7 @@
 #include "Socket.hpp"
 
 #include <winsock.h>
+#include <thread>
 
 bool running = false;
 
@@ -16,7 +17,7 @@ int main() {
 	socket.winBind();
 	socket.winListen();
 
-	socket.running = true;	
+	socket.running = true;
 	socket.winAccept();
 
 	return 0;

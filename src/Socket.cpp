@@ -58,6 +58,7 @@ int Socket::winAccept(){
 			continue;
 		}
 		log.info("Client connected");
+		// handling client starts here
 		closesocket(clientSocket);
 	}
 	return 0;
