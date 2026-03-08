@@ -18,7 +18,10 @@ int main() {
 	socket.winListen();
 
 	socket.running = true;
-	socket.winAccept();
+	while(socket.running){
+		SOCKET clientSocket = socket.winAccept();
+		if(clientSocket == INVALID_SOCKET) continue;
+	}
 
 	return 0;
 }
