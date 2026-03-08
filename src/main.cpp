@@ -14,10 +14,7 @@ int main() {
 	Socket socket;
 	socket.winInit();
 	socket.winBind();
-	running = true;
-	while(running){
-		socket.winListen();
-	}
+	socket.winListen();
 
 	return 0;
 }
