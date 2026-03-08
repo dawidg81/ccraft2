@@ -1,6 +1,6 @@
 CXX      := g++
 CXXFLAGS := -std=c++17 -Wall -Wextra
-LDFLAGS  :=
+LDFLAGS  := -lpthread
 
 ifeq ($(OS), Windows_NT)
     LDFLAGS += -lws2_32
@@ -13,13 +13,13 @@ BUILD_DIR := build
 SRC_DIR   := src
 
 SRCS := $(SRC_DIR)/main.cpp \
-        $(SRC_DIR)/Core/Logger.cpp \
-        $(SRC_DIR)/Network/Socket.cpp
+        $(SRC_DIR)/Logger.cpp \
+        $(SRC_DIR)/Socket.cpp
 
 OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRCS))
 
-INCLUDES := -I$(SRC_DIR)/Core \
-            -I$(SRC_DIR)/Network
+INCLUDES := -I$(SRC_DIR)/Logger.hpp \
+            -I$(SRC_DIR)/Socket.hpp
 
 .PHONY: all clean
 
