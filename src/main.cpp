@@ -1,7 +1,6 @@
 #include "Logger.hpp"
 #include "Socket.hpp"
 
-#include <winsock.h>
 #include <winsock2.h>
 
 using namespace std;
@@ -23,11 +22,12 @@ int main() {
 		 * This is where client handling starts.
 		 * RECEIVING CLIENT PACKET
 		 * 1. Receive raw bytes,
-		 * 2. Parse bytes from packet,
-		 * 3. Put into components understandable for server.
+		 * 2. Parse bytes from packet, put into components understandable for server.
 		 */
 		char buffer[131] = {};
 		buffer[0] = recv(clientSocket, buffer, sizeof(buffer), 0);
+		uint8_t packID = buffer[0];
+		uint8_t protVer = buffer [1];
 	}
 
 	return 0;
