@@ -37,11 +37,11 @@ int main() {
 		uint8_t packID = buffer[0];
 		uint8_t protVer = buffer[1];
 		string username; username.assign(buffer + 2, 64);
-		username.erase(username.find('\0'));
+		username.erase(username.find_first_of("\0 \t\r\n", 0, 6));
 		string verKey; verKey.assign(buffer + 66, 64);
 		uint8_t unused = buffer[130];
 
-		log.info(username);
+		log.info(username+ " connected");
 	}
 
 	return 0;
