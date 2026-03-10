@@ -12,11 +12,18 @@ class Player {
 public:
 	string username;
 	string verKey;
+	bool isOP;
 
-	Player(string uname, string verkey){
+	Player(string uname, string verkey, bool op){
 		username = uname;
 		verKey = verkey;
+		isOP = op;
 	}
+};
+
+auto writeMCString = [](char* buf, const string& str){
+	memset(buf, ' ', 64);
+	memcpy(buf, str.c_str(), min(str.size(), (size_t)64));
 };
 
 int main() {
@@ -38,7 +45,7 @@ int main() {
 		if(bytesRecv <= 0){
 			log.err("No bytes received");
 			closesocket(clientSocket);
-			return 1;
+			continue;
 		}
 		uint8_t packID = buffer[0];
 		uint8_t protVer = buffer[1];
@@ -47,12 +54,41 @@ int main() {
 		string verKey; verKey.assign(buffer + 66, 64);
 		uint8_t unused = buffer[130];
 
-		Player player(username, verKey);
+		Player player(username, verKey, false);
+
 		log.info(username + " connected");
 
 		// send server identification (using the same buffer)
 		for(int i=0; i < sizeof(buffer); i++){
 			buffer[i] = {};
+		}
+
+		struct server_id_pack {
+			uint8_t packID;
+			uint8_t protVer;
+			string name;
+			string motd;
+			uint8_t utype;
+		} serverIDPack;
+
+		serverIDPack.packID = 0x00;
+		serverIDPack.protVer = 0x07;
+		serverIDPack.name = "MCC Testing";
+		serverIDPack.motd = "Hello, " + player.username + "!";
+		if(player.isOP == true) serverIDPack.utype = 0x64;
+		else serverIDPack.utype = 0x00;
+
+		buffer[0] = serverIDPack.packID;
+		buffer[1] = serverIDPack.protVer;
+		writeMCString(buffer + 2, serverIDPack.name);
+		writeMCString(buffer + 66, serverIDPack.motd);
+		buffer[130] = serverIDPack.utype;
+
+		int bytesSent = send(clientSocket, buffer, sizeof(buffer), 0);
+		if(bytesSent != sizeof(buffer)){
+			log.err("Failed to send buffer");
+			closesocket(clientSocket);
+			continue;
 		}
 	}
 
