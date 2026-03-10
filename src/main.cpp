@@ -28,23 +28,25 @@ public:
 
 class Packet {
 public:
-	void recvPlayerId(SOCKET socket){
+	Player* recvPlayerId(SOCKET socket){
 		char buffer[131] = {};
 		int bytesRecv = recv(socket, buffer, sizeof(buffer), 0);
 
 		if(bytesRecv <= 0){
 			log.err("No bytes received");
 			closesocket(socket);
+			return nullptr;
 		}
 
-		uint8_t packID = buffer[0];
-		uint8_t protVer = buffer[1];
+		// uint8_t packID = buffer[0];
+		// uint8_t protVer = buffer[1];
 		string username; username.assign(buffer + 2, 64);
 		username.erase(username.find_first_of("\0 \t\r\n", 0, 6));
 		string verKey; verKey.assign(buffer + 66, 64);
 		uint8_t unused = buffer[130];
 
 		log.info(username + " connected");
+		return new Player(username, verKey, false);
 	}
 
 	void sendServerId(SOCKET socket, string name, string motd, char utype){
@@ -79,38 +81,15 @@ int main() {
 		if(clientSocket == INVALID_SOCKET) continue;
 
 		// Receive player identification
-		/*
-		char buffer[131] = {};
-		int bytesRecv = recv(clientSocket, buffer, sizeof(buffer), 0);
-
-		if(bytesRecv <= 0){
-			log.err("No bytes received");
-			closesocket(clientSocket);
+		Player* player = pack.recvPlayerId(clientSocket);
+		if(player == nullptr){
 			continue;
 		}
 
-		uint8_t packID = buffer[0];
-		uint8_t protVer = buffer[1];
-		string username; username.assign(buffer + 2, 64);
-		username.erase(username.find_first_of("\0 \t\r\n", 0, 6));
-		string verKey; verKey.assign(buffer + 66, 64);
-		uint8_t unused = buffer[130];
-
-		Player player(username, verKey, false);
-
-		log.info(username + " connected");
-		*/
-
 		// send server identification (using the same buffer)
-		Player player(username, verKey, false);
-		
-		string name, motd;
-		char utype;
-
-		name = "MCC Testing";
-		motd = "Welcome, " + player.username + "!";
-		if(player.isOP == true) utype = 0x64;
-		else utype = 0x00;
+		string name = "MCC Testing";
+		string motd = "Welcome, " + player->username + "!";
+		char utype = player->isOP ? 0x64 : 0x00;
 
 		pack.sendServerId(clientSocket, name, motd, utype);
 
