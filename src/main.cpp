@@ -8,6 +8,17 @@ using namespace std;
 
 Logger log;
 
+class Player {
+public:
+	string username;
+	string verKey;
+
+	Player(string uname, string verkey){
+		username = uname;
+		verKey = verkey;
+	}
+};
+
 int main() {
 	log.raw("mcc v0.0.0");
 	Socket socket;
@@ -19,12 +30,8 @@ int main() {
 	while(socket.running){
 		SOCKET clientSocket = socket.winAccept();
 		if(clientSocket == INVALID_SOCKET) continue;
-		/*
-		 * This is where client handling starts.
-		 * RECEIVING CLIENT PACKET
-		 * 1. Receive raw bytes,
-		 * 2. Parse bytes from packet, put into components understandable for server.
-		 */
+
+		// Receive player identification
 		char buffer[131] = {};
 		int bytesRecv = recv(clientSocket, buffer, sizeof(buffer), 0);
 
@@ -33,7 +40,6 @@ int main() {
 			closesocket(clientSocket);
 			return 1;
 		}
-
 		uint8_t packID = buffer[0];
 		uint8_t protVer = buffer[1];
 		string username; username.assign(buffer + 2, 64);
@@ -41,7 +47,13 @@ int main() {
 		string verKey; verKey.assign(buffer + 66, 64);
 		uint8_t unused = buffer[130];
 
-		log.info(username+ " connected");
+		Player player(username, verKey);
+		log.info(username + " connected");
+
+		// send server identification (using the same buffer)
+		for(int i=0; i < sizeof(buffer); i++){
+			buffer[i] = {};
+		}
 	}
 
 	return 0;
