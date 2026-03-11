@@ -64,6 +64,20 @@ public:
 			closesocket(socket);
 		}
 	}
+
+	void sendLevel(SOCKET socket, int x, int y, int z){
+		char level[x][y][z];
+		for(int i=0; i < x; i++){
+			for(int j=0; j < z; j++){
+				for(int k=0; k < y; k++){
+					level[i][j][k] = 0x00;
+				}
+			}
+		}
+
+		char levelinitbuff = 0x02;
+		send(socket, &levelinitbuff, sizeof(levelinitbuff), 0);
+	}
 };
 
 Packet pack;
@@ -93,11 +107,7 @@ int main() {
 
 		pack.sendServerId(clientSocket, name, motd, utype);
 
-		// Level initialization (just to debug server id packet)
-		char levelinitbuff = 0x02;
-		send(clientSocket, &levelinitbuff, sizeof(levelinitbuff), 0);
-
-		// delete player;
+		delete player;
 	}
 
 	return 0;
