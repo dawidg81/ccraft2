@@ -5,7 +5,7 @@
 class Logger
 {
 public:
-	bool showDebug = false;
+	bool showDebug;
 
 	void raw(std::string msg);
 	void info(std::string msg);

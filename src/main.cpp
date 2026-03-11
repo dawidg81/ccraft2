@@ -115,8 +115,8 @@ public:
 		compressedSize = zs.total_out;
 		deflateEnd(&zs);
 		compressed.resize(compressedSize);
-		log.info("Compr. size: " + to_string(compressedSize));
-		log.info("Chunks to send: " + to_string((compressedSize + 1023) / 1024));
+		log.debug("Compr. size: " + to_string(compressedSize));
+		log.debug("Chunks to send: " + to_string((compressedSize + 1023) / 1024));
 
 		// SEND PACKETS
 		uint8_t initPacket = 0x02;
@@ -155,7 +155,8 @@ public:
 
 Packet pack;
 
-int main() {
+int main(){
+	log.showDebug = false;
 	log.raw("ccraft2 v0.0.0");
 	Socket socket;
 	socket.winInit();
