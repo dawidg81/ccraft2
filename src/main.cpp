@@ -69,7 +69,7 @@ public:
 Packet pack;
 
 int main() {
-	log.raw("mcc v0.0.0");
+	log.raw("ccraft2 v0.0.0");
 	Socket socket;
 	socket.winInit();
 	socket.winBind();

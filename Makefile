@@ -6,16 +6,16 @@ OBJ = $(patsubst src/%.cpp,build/%.o,$(SRC))
 # Detect Windows
 ifeq ($(OS),Windows_NT)
     MKDIR = if not exist build mkdir build
-    RM = rmdir /s /q build & del /q mcc.exe
+    RM = rmdir /s /q build & del /q ccraft2.exe
 else
     MKDIR = mkdir -p build
-    RM = rm -rf build mcc
+    RM = rm -rf build ccraft2
 endif
 
-all: mcc
+all: ccraft2
 
-mcc: $(OBJ)
-	g++ $(OBJ) -o mcc -lpthread -lws2_32
+ccraft2: $(OBJ)
+	g++ $(OBJ) -o ccraft2 -lpthread -lws2_32
 
 build/%.o: src/%.cpp
 	$(MKDIR)

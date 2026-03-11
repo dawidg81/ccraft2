@@ -1,6 +1,5 @@
-# mcc
-
-mcc (MineCraftC) is a Minecraft Classic server software.
+# ccraft2
+ccraft2 is a Minecraft Classic server software.
 
 # Build and run
 
@@ -16,7 +15,7 @@ Then run builded program:
 
 Or if you are on Windows:
 ```
-.\mcc.exe
+.\ccraft2.exe
 ```
 
 # Contributing
