@@ -129,12 +129,16 @@ public:
 			offset += chunkLen;
 		}
 
-		char finalPacket[7] = {};
+		uint8_t finalPacket[7];
+		uint16_t sx = (uint16_t)x;
+		uint16_t sy = (uint16_t)y;
+		uint16_t sz = (uint16_t)z;
+
 		finalPacket[0] = 0x04;
-		finalPacket[1] = (x >> 8) & 0xFF; finalPacket[2] = x & 0xFF;
-		finalPacket[3] = (y >> 8) & 0xFF; finalPacket[4] = y & 0xFF;
-		finalPacket[5] = (z >> 8) & 0xFF; finalPacket[6] = z & 0xFF;
-		send(socket, finalPacket, sizeof(finalPacket), 0);
+		finalPacket[1] = (sx >> 8) & 0xFF; finalPacket[2] = sx & 0xFF;
+		finalPacket[3] = (sy >> 8) & 0xFF; finalPacket[4] = sy & 0xFF;
+		finalPacket[5] = (sz >> 8) & 0xFF; finalPacket[6] = sz & 0xFF;
+		send(socket, (char*)finalPacket, sizeof(finalPacket), 0);
 	}
 };
 
