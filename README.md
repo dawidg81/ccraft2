@@ -2,6 +2,23 @@
 
 mcc (MineCraftC) is a Minecraft Classic server software.
 
+# Build and run
+
+To build this software, run this command at the project root:
+```
+make
+```
+
+Then run builded program:
+```
+./mcc
+```
+
+Or if you are on Windows:
+```
+.\mcc.exe
+```
+
 # Contributing
 
 Any help with the project is highly appreciated.
