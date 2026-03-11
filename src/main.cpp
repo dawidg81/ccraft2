@@ -33,12 +33,17 @@ class Packet {
 public:
 	Player* recvPlayerId(SOCKET socket){
 		char buffer[131] = {};
-		int bytesRecv = recv(socket, buffer, sizeof(buffer), 0);
+		int total = 0;
 
-		if(bytesRecv <= 0){
-			log.err("No bytes received");
-			closesocket(socket);
-			return nullptr;
+		while(total < 131){
+			int bytesRecv = recv(socket, buffer, sizeof(buffer), 0);
+			if(bytesRecv <= 0){
+				log.err("Broken pipe");
+				closesocket(socket);
+				return nullptr;
+			
+			total += bytesRecv;
+			}
 		}
 
 		// uint8_t packID = buffer[0];
