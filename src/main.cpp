@@ -159,6 +159,7 @@ int main() {
 		char utype = player->isOP ? 0x64 : 0x00;
 
 		pack.sendServerId(clientSocket, name, motd, utype);
+		pack.sendLevel(clientSocket, 256, 64, 256);
 
 		delete player;
 	}
