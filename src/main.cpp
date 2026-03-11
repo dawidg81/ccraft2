@@ -41,9 +41,8 @@ public:
 				log.err("Broken pipe");
 				closesocket(socket);
 				return nullptr;
-			
-			total += bytesRecv;
 			}
+			total += bytesRecv;
 		}
 
 		// uint8_t packID = buffer[0];
