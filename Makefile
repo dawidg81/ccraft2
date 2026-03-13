@@ -3,6 +3,8 @@
 SRC = $(wildcard src/*.cpp)
 OBJ = $(patsubst src/%.cpp,build/%.o,$(SRC))
 
+CXXFLAGS = -std=c++14 -D_WIN32_WINNT=0x0601
+
 # Detect Windows
 ifeq ($(OS),Windows_NT)
     MKDIR = if not exist build mkdir build
@@ -15,11 +17,11 @@ endif
 all: ccraft2
 
 ccraft2: $(OBJ)
-	g++ -std=c++14 $(OBJ) -o ccraft2 -lws2_32 -lz -lpthread
+	g++ $(CXXFLAGS) $(OBJ) -o ccraft2 -lws2_32 -lz -lpthread
 
 build/%.o: src/%.cpp
 	$(MKDIR)
-	g++ -std=c++14 -c $< -o $@
+	g++ $(CXXFLAGS) -c $< -o $@
 
 clean:
 	$(RM)
