@@ -1,20 +1,19 @@
-#include "Logger.hpp"
-#include "Socket.hpp"
-
-#ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0601
-#include <sdkddkver.h>
-#endif
+#define WIN32_LEAN_AND_MEAN
 
 #include <winsock2.h>
+#include <windows.h>
+#include <thread>
+#include <mutex>
+#include <map>
 #include <string>
 #include <zlib.h>
 #include <vector>
 #include <cstring>
 #include <fstream>
-#include <thread>
-#include <mutex>
-#include <map>
+
+#include "Logger.hpp"
+#include "Socket.hpp"
 
 using namespace std;
 
