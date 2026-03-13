@@ -83,14 +83,19 @@ public:
 	string username;
 	string verKey;
 	bool isOP;
-
-	short x, y, z, yaw, pitch;
 	uint8_t id;
+	SOCKET socket;
 
-	Player(string uname, string verkey, bool op){
+	short x, y, z;
+	uint8_t yaw, pitch;
+
+	Player(string uname, string verkey, bool op, SOCKET sock){
 		username = uname;
 		verKey = verkey;
 		isOP = op;
+		socket = sock;
+		x = y = z = yaw = pitch = 0;
+		id = 0;
 	}
 };
 
