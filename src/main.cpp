@@ -52,7 +52,7 @@ public:
 				setBlock(ix, sizeY/2, iz, 2);
 			}
 		}
-		logger.info("Generated new level to a file";);
+		logger.info("Generated new level to a file");
 	}
 
 	void save(const string& filename){
@@ -444,7 +444,7 @@ int main(){
 		level.load("world.lvl");
 	} else {
 		checkFile.close();
-		level.generateFlatgrass();
+		level.newFile();
 		level.save("world.lvl");
 	}
 
