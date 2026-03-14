@@ -405,7 +405,7 @@ void handlePlayer(SOCKET clientSocket){
 
 					  lock_guard<mutex> lock(playersMutex);
 					  for(auto& pair : players)
-						  pack.sendMessage(pair.second->socket, player->id, "<" + player->username + ">" + msg);
+						  pack.sendMessage(pair.second->socket, player->id, "<" + player->username + "> " + msg);
 					  break;
 				  }
 			default:
