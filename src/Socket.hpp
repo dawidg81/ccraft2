@@ -1,5 +1,17 @@
 #pragma once
-#include <winsock2.h>
+#ifdef _WIN32
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+#else
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+  #include <unistd.h>
+  using SOCKET = int;
+  #define INVALID_SOCKET (-1)
+  #define SOCKET_ERROR   (-1)
+  #define closesocket(s) close(s)
+#endif
 #include "Logger.hpp"
 
 #define NET_SOCK_ADDR "0.0.0.0"
@@ -8,19 +20,14 @@
 class Socket
 {
 private:
-	Logger log;
-	SOCKET mainSocket = INVALID_SOCKET;
+    Logger log;
+    SOCKET mainSocket = INVALID_SOCKET;
 
 public:
-	bool running = false;
+    bool running = false;
 
-	int pInit();
-	int pBind();
-	int pListen();
-	int pAccept();
-
-	int winInit();
-	int winBind();
-	int winListen();
-	SOCKET winAccept();
+    int sockInit();
+    int sockBind();
+    int sockListen();
+    SOCKET sockAccept();
 };

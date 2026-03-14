@@ -1,8 +1,6 @@
 #define _WIN32_WINNT 0x0601
 #define WIN32_LEAN_AND_MEAN
 
-#include <winsock2.h>
-#include <windows.h>
 #include <thread>
 #include <mutex>
 #include <map>
@@ -451,13 +449,13 @@ int main(){
 	thread(saveLoop).detach();
 
 	Socket socket;
-	socket.winInit();
-	socket.winBind();
-	socket.winListen();
+	socket.sockInit();
+	socket.sockBind();
+	socket.sockListen();
 
 	socket.running = true;
 	while(socket.running){
-		SOCKET clientSocket = socket.winAccept();
+		SOCKET clientSocket = socket.sockAccept();
 		if(clientSocket == INVALID_SOCKET) continue;
 
 		thread(handlePlayer, clientSocket).detach();
