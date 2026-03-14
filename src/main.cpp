@@ -17,7 +17,7 @@
 
 using namespace std;
 
-Logger log;
+Logger logger;
 
 auto writeMCString = [](char* buf, const string& str){
 	memset(buf, ' ', 64);
@@ -45,7 +45,7 @@ public:
 
 	void save(const string& filename){
 		ofstream file(filename, ios::binary);
-		if(!file){log.err("Failed to open level file for writing: " + filename); return;}
+		if(!file){logger.err("Failed to open level file for writing: " + filename); return;}
 
 		for(int iy=0; iy < sizeY; iy++){
 			for(int iz=0; iz < sizeZ; iz++){
@@ -63,12 +63,12 @@ public:
 			}
 		}
 		file.close();
-		log.info("Level saved to " + filename);
+		logger.info("Level saved to " + filename);
 	}
 
 	void load(const string& filename){
 		ifstream file(filename, ios::binary);
-		if(!file){log.err("Failed to open level file: " + filename); return;}
+		if(!file){logger.err("Failed to open level file: " + filename); return;}
 
 		fill(blocks.begin(), blocks.end(), 0x00);
 
@@ -81,7 +81,7 @@ public:
 			setBlock(ix, iy, iz, id);
 		}
 		file.close();
-		log.info("Level loaded from " + filename);
+		logger.info("Level loaded from " + filename);
 	}
 };
 
@@ -125,7 +125,7 @@ public:
 		while(total < 131){
 			int bytesRecv = recv(socket, buffer + total, 131 - total, 0);
 			if(bytesRecv <= 0){
-				log.err("Broken pipe");
+				logger.err("Broken pipe");
 				closesocket(socket);
 				return nullptr;
 			}
@@ -139,7 +139,7 @@ public:
 		string verKey; verKey.assign(buffer + 66, 64);
 		uint8_t unused = buffer[130];
 
-		log.info(username + " connected");
+		logger.info(username + " connected");
 		return new Player(username, verKey, false, socket);
 	}
 
@@ -154,7 +154,7 @@ public:
 
 		int bytesSent = send(socket, buffer, sizeof(buffer), 0);
 		if(bytesSent != sizeof(buffer)){
-			log.err("Failed to send buffer");
+			logger.err("Failed to send buffer");
 			closesocket(socket);
 		}
 	}
@@ -179,7 +179,7 @@ public:
 		z_stream zs = {};
 		int ret = deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
 		if(ret != Z_OK){
-			log.err("Deflating failed: " + to_string(ret));
+			logger.err("Deflating failed: " + to_string(ret));
 			return;
 		}
 
@@ -190,15 +190,15 @@ public:
 
 		ret = deflate(&zs, Z_FINISH);
 		if(ret != Z_STREAM_END){
-			log.err("Deflating did not finish: " + to_string(ret));
+			logger.err("Deflating did not finish: " + to_string(ret));
 			deflateEnd(&zs);
 			return;
 		}
 		compressedSize = zs.total_out;
 		deflateEnd(&zs);
 		compressed.resize(compressedSize);
-		log.debug("Compr. size: " + to_string(compressedSize));
-		log.debug("Chunks to send: " + to_string((compressedSize + 1023) / 1024));
+		logger.debug("Compr. size: " + to_string(compressedSize));
+		logger.debug("Chunks to send: " + to_string((compressedSize + 1023) / 1024));
 
 		// SEND PACKETS
 		uint8_t initPacket = 0x02;
@@ -237,9 +237,40 @@ public:
 
 Packet pack;
 
+Level level(256, 64, 256);
+
+void handlePlayer(SOCKET clientSocket){
+	Player* player = pack.recvPlayerId(clientSocket);
+	if(player == nullptr) return;
+
+	string name = "MCC Testing";
+	string motd = "Welcome, " + player->username + "!";
+	char utype = player->isOP ? 0x64 : 0x00;
+
+	{
+		lock_guard<mutex> lock(playersMutex);
+		player->id = assignId();
+		players[player->id] = player;
+	}
+
+	pack.sendServerId(clientSocket, name, motd, utype);
+	pack.sendLevel(clientSocket, level);
+
+	{
+		lock_guard<mutex> lock(playersMutex);
+		players.erase(player->id);
+	}
+	logger.info(player->username + " disconnected");
+	closesocket(clientSocket);
+	delete player;
+}
+
 int main(){
-	log.showDebug = false;
-	log.raw("ccraft2 v0.0.0");
+	logger.showDebug = false;
+	logger.raw("ccraft2 v0.0.0");
+
+	level.load("world.lvl");
+
 	Socket socket;
 	socket.winInit();
 	socket.winBind();
@@ -250,24 +281,7 @@ int main(){
 		SOCKET clientSocket = socket.winAccept();
 		if(clientSocket == INVALID_SOCKET) continue;
 
-		// Receive player identification
-		Player* player = pack.recvPlayerId(clientSocket);
-		if(player == nullptr){
-			continue;
-		}
-
-		// send server identification (using the same buffer)
-		string name = "MCC Testing";
-		string motd = "Welcome, " + player->username + "!";
-		char utype = player->isOP ? 0x64 : 0x00;
-
-		pack.sendServerId(clientSocket, name, motd, utype);
-		
-		Level level(256, 64, 256);
-		level.load("world.lvl");
-		pack.sendLevel(clientSocket, level);
-
-		delete player;
+		thread(handlePlayer, clientSocket).detach();
 	}
 
 	return 0;
