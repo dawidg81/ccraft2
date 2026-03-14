@@ -1,4 +1,5 @@
 #include "Socket.hpp"
+#include <cstring>
 
 sockaddr_in service;
 
