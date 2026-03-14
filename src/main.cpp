@@ -233,11 +233,70 @@ public:
 		finalPacket[5] = (sz >> 8) & 0xFF; finalPacket[6] = sz & 0xFF;
 		send(socket, (char*)finalPacket, sizeof(finalPacket), 0);
 	}
+
+	void sendSpawnPlayer(SOCKET socket, Player* p){
+		char buf[74] = {};
+		buf[0] = 0x07;
+		buf[1] = (int8_t)p->id;
+		writeMCString(buf + 2, p->username);
+		buf[66] = (p->x >> 8) & 0xFF; buf[67] = p->x & 0xFF;
+		buf[68] = (p->y >> 8) & 0xFF; buf[69] = p->y & 0xFF;
+		buf[70] = (p->z >> 8) & 0xFF; buf[71] = p->z & 0xFF;
+		buf[72] = p->yaw;
+		buf[73] = p->pitch;
+		send(socket, buf, sizeof(buf), 0);
+	}
+
+	void sendDespawnPlayer(SOCKET socket, uint8_t id){
+		char buf[2] = {};
+		buf[0] = 0x0c;
+		buf[1] = (int8_t)id;
+		send(socket, buf, sizeof(buf), 0);
+	}
+
+	void sendSetBlock(SOCKET socket, short x, short y, short z, uint8_t block){
+		char buf[8] = {};
+		buf[0] = 0x06;
+		buf[1] = (x >> 8) & 0xFF; buf[2] = x & 0xFF;
+		buf[3] = (y >> 8) & 0xFF; buf[4] = y & 0xFF;
+		buf[5] = (z >> 8) & 0xFF; buf[6] = z & 0xFF;
+		buf[7] = block;
+		send(socket, buf, sizeof(buf), 0);
+	}
+
+	void sendPositionUpdate(SOCKET socket, Player* p){
+		char buf[10] = {};
+		buf[0] = 0x08;
+		buf[1] = (int8_t)p->id;
+		buf[2] = (p->x >> 8) & 0xFF; buf[3] = p->x & 0xFF;
+		buf[4] = (p->y >> 8) & 0xFF; buf[5] = p->y & 0xFF;
+		buf[6] = (p->z >> 8) & 0xFF; buf[7] = p->z & 0xFF;
+		buf[8] = p->yaw;
+		buf[9] = p->pitch;
+		send(socket, buf, sizeof(buf), 0);
+	}
+
+	void sendMessage(SOCKET socket, uint8_t id, const string& msg){
+		char buf[66] = {};
+		buf[0] = 0x0d;
+		buf[1] = (int8_t)id;
+		writeMCString(buf +2, msg);
+		send(socket, buf, sizeof(buf), 0);
+	}
 };
 
 Packet pack;
-
 Level level(256, 64, 256);
+
+bool recvExact(SOCKET socket, char* buf, int len){
+	int total = 0;
+	while(total < len){
+		int n = recv(socket, buf + total, len - total, 0);
+		if(n <= 0) return false;
+		total += n;
+	}
+	return true;
+}
 
 void handlePlayer(SOCKET clientSocket){
 	Player* player = pack.recvPlayerId(clientSocket);
@@ -256,10 +315,100 @@ void handlePlayer(SOCKET clientSocket){
 	pack.sendServerId(clientSocket, name, motd, utype);
 	pack.sendLevel(clientSocket, level);
 
+	player->x = (level.sizeX / 2) * 32;
+	player->y = (level.sizeY / 2) * 32 + 51;
+	player->z = (level.sizeZ / 2) * 32;
+	{
+		lock_guard<mutex> lock(playersMutex);
+		for(auto& pair : players){
+			Player* other = pair.second;
+			if(other->id == player->id) continue;
+			pack.sendSpawnPlayer(clientSocket, other); // all others -> player
+			pack.sendSpawnPlayer(other->socket, player);
+		}
+	}
+
+	{
+		char buf[10] = {};
+		buf[0] = 0x08;
+		buf[1] = (int8_t)-1;
+		buf[2] = (player->x >> 8) & 0xFF; buf[3] = player->x & 0xFF;
+		buf[4] = (player->y >> 8) & 0xFF; buf[5] = player->y & 0xFF;
+		buf[6] = (player->z >> 8) & 0xFF; buf[7] = player->z & 0xFF;
+		buf[8] = player->yaw;
+		buf[9] = player->pitch;
+		send(clientSocket, buf, sizeof(buf), 0);
+	}
+
+	while(true){
+		char packetId = 0;
+		if(!recvExact(clientSocket, &packetId, 1)) break;
+
+		switch((uint8_t)packetId){
+			case 0x05:{ // set block
+					  char buf[7] = {};
+					  if(!recvExact(clientSocket, buf, 7)) goto disconnect;
+					  short bx = (short)((uint8_t)buf[0] << 8 | (uint8_t)buf[1]);
+					  short by = (short)((uint8_t)buf[2] << 8 | (uint8_t)buf[3]);
+					  short bz = (short)((uint8_t)buf[4] << 8 | (uint8_t)buf[5]);
+					  uint8_t mode = (uint8_t)buf[6];
+
+					  char btbuf[1] = {};
+					  if(!recvExact(clientSocket, btbuf, 1)) goto disconnect;
+					  uint8_t blockType = (uint8_t)btbuf[0];
+
+					  uint8_t newBlock = (mode == 0x01) ? blockType : 0x00;
+					  level.setBlock(bx, by, bz, newBlock);
+
+					  lock_guard<mutex> lock(playersMutex);
+					  for(auto& pair : players)
+						  pack.sendSetBlock(pair.second->socket, bx, by, bz, newBlock);
+					  break;
+				  }
+			case 0x08:{ // pos ort
+					  char buf[9] = {};
+					  if(!recvExact(clientSocket, buf, 9)) goto disconnect;
+					  
+					  player->x = (short)((uint8_t)buf[1] << 8 | (uint8_t)buf[2]);
+					  player->y = (short)((uint8_t)buf[3] << 8 | (uint8_t)buf[4]);
+					  player->z = (short)((uint8_t)buf[5] << 8 | (uint8_t)buf[6]);
+					  player->yaw = (uint8_t)buf[7];
+					  player->pitch = (uint8_t)buf[8];
+
+					  lock_guard<mutex> lock(playersMutex);
+					  for(auto& pair: players){
+						  if(pair.second->id != player->id)
+							  pack.sendPositionUpdate(pair.second->socket, player);
+					  }
+					  break;
+				  }
+			case 0x0d:{ // msg
+					  char buf[65] = {};
+					  if(!recvExact(clientSocket, buf, 65)) goto disconnect;
+
+					  string msg; msg.assign(buf + 1, 64);
+					  msg.erase(msg.find_last_not_of(' ') + 1);
+
+					  logger.info("<" + player->username + "> " + msg);
+
+					  lock_guard<mutex> lock(playersMutex);
+					  for(auto& pair : players)
+						  pack.sendMessage(pair.second->socket, player->id, "<" + player->username + ">" + msg);
+					  break;
+				  }
+			default:
+				  logger.err(player->username + " sent unknown packet 0x" + to_string((uint8_t)packetId));
+				  break;
+		}
+	}
+disconnect:
 	{
 		lock_guard<mutex> lock(playersMutex);
 		players.erase(player->id);
+		for(auto& pair : players)
+			pack.sendDespawnPlayer(pair.second->socket, player->id);
 	}
+
 	logger.info(player->username + " disconnected");
 	closesocket(clientSocket);
 	delete player;
