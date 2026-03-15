@@ -10,7 +10,10 @@
 #include <vector>
 #include <cstring>
 #include <fstream>
+
+#ifndef _WIN32
 #include <netdb.h>
+#endif
 
 #include "Logger.hpp"
 #include "Socket.hpp"
@@ -296,6 +299,13 @@ public:
 		writeMCString(buf +2, msg);
 		send(socket, buf, sizeof(buf), 0);
 	}
+
+	void sendDisconnect(SOCKET socket, const string& reason){
+		char buf[65] = {};
+		buf[0] = 0x0e;
+		writeMCString(buf + 1, reason);
+		send(socket, buf, sizeof(buf), 0);
+	}
 };
 
 Packet pack;
@@ -417,7 +427,8 @@ void handlePlayer(SOCKET clientSocket){
 				  }
 			default:
 				  logger.err(player->username + " sent unknown packet 0x" + to_string((uint8_t)packetId));
-				  break;
+				  pack.sendDisconnect(clientSocket, "Malformed data sent (0x" + to_string((uint8_t)packetId) + ")");
+				  goto disconnect;
 		}
 	}
 disconnect:
