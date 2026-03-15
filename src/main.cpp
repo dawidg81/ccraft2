@@ -140,6 +140,41 @@ public:
 			sendQueue.pop();
 		}
 	}
+
+	mutex recvMutex;
+	queue<uint8_t> recvQueue;
+
+	void pushByte(uint8_t byte){
+		lock_guard<mutex> lock(recvMutex);
+		if(recvQueue.size() > 65536){
+			disconnected = true;
+			return;
+		}
+		recvQueue.push(byte);
+	}
+
+	bool popByte(uint8_t& out){
+		lock_guard<mutex> lock(recvMutex);
+		if(recvQueue.empty()) return false;
+		out = recvQueue.front();
+		recvQueue.pop();
+		return true;
+	}
+
+	bool popExact(char* buf, int len){
+		lock_guard<mutex> lock(recvMutex);
+		if((int)recvQueue.size() < len) return false;
+		for(int i = 0; i < len; i++){
+			buf[i] = (char)recvQueue.front();
+			recvQueue.pop();
+		}
+		return true;
+	}
+
+	int available(){
+		lock_guard<mutex> lock(recvMutex);
+		return (int)recvQueue.size();
+	}
 };
 
 mutex playersMutex;
@@ -284,15 +319,15 @@ public:
 		p->enqueue(buf, 74);
 	}
 
-	void sendDespawnPlayer(SOCKET socket, uint8_t id){
+	void sendDespawnPlayer(Player* p){
 		char buf[2] = {};
 		buf[0] = 0x0c;
-		buf[1] = (int8_t)id;
+		buf[1] = (int8_t)p->id;
 		// send(socket, buf, sizeof(buf), 0);
 		p->enqueue(buf, 2);
 	}
 
-	void sendSetBlock(SOCKET socket, short x, short y, short z, uint8_t block){
+	void sendSetBlock(Player* p, short x, short y, short z, uint8_t block){
 		char buf[8] = {};
 		buf[0] = 0x06;
 		buf[1] = (x >> 8) & 0xFF; buf[2] = x & 0xFF;
@@ -303,7 +338,7 @@ public:
 		p->enqueue(buf, 8);
 	}
 
-	void sendPositionUpdate(SOCKET socket, Player* p){
+	void sendPositionUpdate(Player* p){
 		char buf[10] = {};
 		buf[0] = 0x08;
 		buf[1] = (int8_t)p->id;
@@ -316,21 +351,21 @@ public:
 		p->enqueue(buf, 10);
 	}
 
-	void sendMessage(SOCKET socket, uint8_t id, const string& msg){
+	void sendMessage(Player* p, const string& msg){
 		char buf[66] = {};
 		buf[0] = 0x0d;
-		buf[1] = (int8_t)id;
+		buf[1] = (int8_t)p->id;
 		writeMCString(buf +2, msg);
 		// send(socket, buf, sizeof(buf), 0);
-		p->enqueue(buf, 10);
+		p->enqueue(buf, 66);
 	}
 
-	void sendDisconnect(SOCKET socket, const string& reason){
+	void sendDisconnect(Player* p, const string& reason){
 		char buf[65] = {};
 		buf[0] = 0x0e;
 		writeMCString(buf + 1, reason);
 		// send(socket, buf, sizeof(buf), 0);
-		p->enqueue(buf, 66);
+		p->enqueue(buf, 65);
 	}
 };
 
@@ -361,6 +396,18 @@ void handlePlayer(SOCKET clientSocket){
 		players[player->id] = player;
 	}
 
+	thread([player, clientSocket](){
+		char buf[512];
+		while(!player->disconnected){
+			int n = recv(clientSocket, buf, sizeof(buf), 0);
+			if(n <= 0){
+				player->disconnected = true;
+				break;
+			}
+			for(int i=0; i<n; i++) player->pushByte((uint8_t)buf[i]);
+		}
+	}).detach();
+
 	thread senderThread([player](){
 		while(true){
 			this_thread::sleep_for(chrono::milliseconds(10));
@@ -377,7 +424,7 @@ void handlePlayer(SOCKET clientSocket){
 	{
 	lock_guard<mutex> lock(playersMutex);
 	for(auto& pair : players)
-		pack.sendMessage(pair.second->socket, player->id, "&e" + player->username + " joined the game");
+		pack.sendMessage(player, "&e" + player->username + " joined the game");
 	}
 
 	player->x = (level.sizeX / 2) * 32;
@@ -405,41 +452,44 @@ void handlePlayer(SOCKET clientSocket){
 		send(clientSocket, buf, sizeof(buf), 0);
 	}
 
+	auto qrecvExact = [&](char* buf, int len) -> bool {
+		while(!player->disconnected){
+			if(player->popExact(buf, len)) return true;
+			this_thread::sleep_for(chrono::milliseconds(1));
+		}
+		return false;
+	};
+
 	while(true){
+		if(player->disconnected) goto disconnect;
 		char packetId = 0;
-		if(!recvExact(clientSocket, &packetId, 1)) break;
+		if(!qrecvExact(&packetId, 1)) break;
 
 		switch((uint8_t)packetId){
 			case 0x05:{ // set block
 					  char buf[7] = {};
-					  if(!recvExact(clientSocket, buf, 7)) goto disconnect;
+					  if(!qrecvExact(buf, 7)) goto disconnect;
 					  short bx = (short)((uint8_t)buf[0] << 8 | (uint8_t)buf[1]);
 					  short by = (short)((uint8_t)buf[2] << 8 | (uint8_t)buf[3]);
 					  short bz = (short)((uint8_t)buf[4] << 8 | (uint8_t)buf[5]);
 					  uint8_t mode = (uint8_t)buf[6];
 
 					  char btbuf[1] = {};
-					  if(!recvExact(clientSocket, btbuf, 1)) goto disconnect;
+					  if(!qrecvExact(btbuf, 1)) goto disconnect;
 					  uint8_t blockType = (uint8_t)btbuf[0];
 
 					  uint8_t newBlock = (mode == 0x01) ? blockType : 0x00;
 					  level.setBlock(bx, by, bz, newBlock);
 
-					  lock_guard<mutex> lock(playersMutex);
-					  
-					  char blkbuf[8] = {};
-					  blkbuf[0] = 0x06;
-					  blkbuf[1] = (bx >> 8) & 0xFF; blkbuf[2] = bx & 0xFF;
-					  blkbuf[3] = (by >> 8) & 0xFF; blkbuf[4] = by & 0xFF;
-					  blkbuf[5] = (bz >> 8) & 0xFF; blkbuf[6] = bz & 0xFF;
-					  blkbuf[7] = newBlock;
+					  lock_guard<mutex> lock(playersMutex); 
 					  for(auto& pair : players)
-						  pair.second->enqueue(blkbuf, 8);
+						  pack.sendSetBlock(player, bx, by, bz, newBlock);
+
 					  break;
 				  }
 			case 0x08:{ // pos ort
 					  char buf[9] = {};
-					  if(!recvExact(clientSocket, buf, 9)) goto disconnect;
+					  if(!qrecvExact(buf, 9)) goto disconnect;
 					  
 					  player->x = (short)((uint8_t)buf[1] << 8 | (uint8_t)buf[2]);
 					  player->y = (short)((uint8_t)buf[3] << 8 | (uint8_t)buf[4]);
@@ -450,13 +500,13 @@ void handlePlayer(SOCKET clientSocket){
 					  lock_guard<mutex> lock(playersMutex);
 					  for(auto& pair: players){
 						  if(pair.second->id != player->id)
-							  pack.sendPositionUpdate(pair.second->socket, player);
+							  pack.sendPositionUpdate(player);
 					  }
 					  break;
 				  }
 			case 0x0d:{ // msg
 					  char buf[65] = {};
-					  if(!recvExact(clientSocket, buf, 65)) goto disconnect;
+					  if(!qrecvExact(buf, 65)) goto disconnect;
 
 					  string msg; msg.assign(buf + 1, 64);
 					  msg.erase(msg.find_last_not_of(' ') + 1);
@@ -465,12 +515,12 @@ void handlePlayer(SOCKET clientSocket){
 
 					  lock_guard<mutex> lock(playersMutex);
 					  for(auto& pair : players)
-						  pack.sendMessage(pair.second->socket, player->id, "<" + player->username + "> " + msg);
+						  pack.sendMessage(player, "<" + player->username + "> " + msg);
 					  break;
 				  }
 			default:
 				  logger.err(player->username + " sent unknown packet 0x" + to_string((uint8_t)packetId));
-				  pack.sendDisconnect(clientSocket, "Malformed data sent (0x" + to_string((uint8_t)packetId) + ")");
+				  pack.sendDisconnect(player, "Malformed data sent (0x" + to_string((uint8_t)packetId) + ")");
 				  goto disconnect;
 		}
 	}
@@ -479,14 +529,14 @@ disconnect:
 		lock_guard<mutex> lock(playersMutex);
 		players.erase(player->id);
 		for(auto& pair : players)
-			pack.sendDespawnPlayer(pair.second->socket, player->id);
+			pack.sendDespawnPlayer(player);
 	}
 
 	logger.info(player->username + " disconnected");
 	{
 	lock_guard<mutex> lock(playersMutex);
 	for(auto& pair : players)
-		pack.sendMessage(pair.second->socket, player->id, "&e" + player->username + " left the game");
+		pack.sendMessage(player, "&e" + player->username + " left the game");
 	}
 	closesocket(clientSocket);
 	delete player;
