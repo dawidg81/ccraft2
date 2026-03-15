@@ -646,7 +646,7 @@ if (::connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
 
 int main(){
 	logger.showDebug = true;
-	logger.raw("ccraft2 v" + VERSION);
+	logger.raw("ccraft2 v".append(VERSION));
 
 	ifstream checkFile("world.lvl");
 	if(checkFile.good()){
