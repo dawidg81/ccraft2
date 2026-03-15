@@ -305,7 +305,7 @@ public:
 		send(socket, (char*)finalPacket, sizeof(finalPacket), 0);
 	}
 
-	void sendSpawnPlayer(SOCKET socket, Player* p){
+	void sendSpawnPlayer(Player* p, Player* target){
 		char buf[74] = {};
 		buf[0] = 0x07;
 		buf[1] = (int8_t)p->id;
@@ -316,7 +316,7 @@ public:
 		buf[72] = p->yaw;
 		buf[73] = p->pitch;
 		// send(socket, buf, sizeof(buf), 0);
-		p->enqueue(buf, 74);
+		target->enqueue(buf, 74);
 	}
 
 	void sendDespawnPlayer(Player* p, Player* target){
@@ -435,8 +435,8 @@ void handlePlayer(SOCKET clientSocket){
 		for(auto& pair : players){
 			Player* other = pair.second;
 			if(other->id == player->id) continue;
-			pack.sendSpawnPlayer(clientSocket, other); // all others -> player
-			pack.sendSpawnPlayer(other->socket, player);
+			pack.sendSpawnPlayer(other, player); // all others -> player
+			pack.sendSpawnPlayer(player, other);
 		}
 	}
 
@@ -483,7 +483,7 @@ void handlePlayer(SOCKET clientSocket){
 
 					  lock_guard<mutex> lock(playersMutex); 
 					  for(auto& pair : players)
-						  pack.sendSetBlock(player, bx, by, bz, newBlock);
+						  pack.sendSetBlock(pair.second, bx, by, bz, newBlock);
 
 					  break;
 				  }
