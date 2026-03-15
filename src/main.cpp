@@ -11,6 +11,7 @@
 #include <cstring>
 #include <fstream>
 #include <queue>
+#include <random>
 
 #ifndef _WIN32
 #include <netdb.h>
@@ -24,12 +25,26 @@ using namespace std;
 #define VERSION "0.2.1"
 
 Logger logger;
-string serverSalt = "472bm7";
 
 auto writeMCString = [](char* buf, const string& str){
 	memset(buf, ' ', 64);
 	memcpy(buf, str.c_str(), min(str.size(), (size_t)64));
 };
+
+std::string generateSalt(int bytes = 32) {
+    std::random_device rd;
+    std::string salt;
+    salt.reserve(bytes * 2);
+
+    for (int i = 0; i < bytes; i++) {
+        unsigned char b = rd() & 0xff;
+        salt += "0123456789abcdef"[b >> 4];
+        salt += "0123456789abcdef"[b & 0xf];
+    }
+    return salt;
+}
+
+std::string serverSalt = generateSalt();
 
 class Level {
 public:
