@@ -13,6 +13,8 @@
 #include <fstream>
 #include <queue>
 #include <random>
+#include <atomic>
+#include <memory>
 
 #ifndef _WIN32
 #include <netdb.h>
