@@ -1,3 +1,4 @@
+#include <chrono>
 #define _WIN32_WINNT 0x0601
 #define WIN32_LEAN_AND_MEAN
 
@@ -413,9 +414,9 @@ void handlePlayer(SOCKET clientSocket){
 		players[player->id] = player;
 	}
 
-	thread([player, clientSocket](){
+	thread([player, clientSocket, stopSender](){
 		char buf[512];
-		while(!player->disconnected){
+		while(!stopSender->load()){
 			int n = recv(clientSocket, buf, sizeof(buf), 0);
 			if(n <= 0){
 				player->disconnected = true;
@@ -425,6 +426,7 @@ void handlePlayer(SOCKET clientSocket){
 		}
 	}).detach();
 
+	/*
 	thread senderThread([player](){
 		while(true){
 			this_thread::sleep_for(chrono::milliseconds(10));
@@ -434,6 +436,17 @@ void handlePlayer(SOCKET clientSocket){
 		}
 	});
 	senderThread.detach();
+	*/
+
+	auto stopSender = make_shared<atomic<bool>>(false);
+
+	thread([player, stopSender](){
+		while(!stopSender->load()){
+			this_thread::sleep_for(chrono::milliseconds(10));
+			player->flushQueue();
+		}
+		player->flushQueue();
+	}).detach();
 
 	pack.sendServerId(clientSocket, name, motd, utype);
 	pack.sendLevel(clientSocket, level);
@@ -545,16 +558,15 @@ disconnect:
 	{
 		lock_guard<mutex> lock(playersMutex);
 		players.erase(player->id);
-		for(auto& pair : players)
+		for(auto& pair : players){
 			pack.sendDespawnPlayer(player, pair.second);
+			pack.sendMessage(player, pair.second, "&e" + player->username + " left the game");
+		}
 	}
 
 	logger.info(player->username + " disconnected");
-	{
-	lock_guard<mutex> lock(playersMutex);
-	for(auto& pair : players)
-		pack.sendMessage(player, pair.second, "&e" + player->username + " left the game");
-	}
+	stopSender->store(true);
+	this_thread::sleep_for(chrono::milliseconds(50));
 	closesocket(clientSocket);
 	delete player;
 }
