@@ -108,7 +108,7 @@ string md5(const string& input){
     return result;
 }
 
-std::string serverSalt = generateSalt();
+std::string serverSalt = md5(generateSalt());
 
 class Level {
 public:
