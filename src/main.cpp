@@ -108,7 +108,7 @@ string md5(const string& input){
     return result;
 }
 
-std::string serverSalt = md5(generateSalt());
+std::string serverSalt = generateSalt();
 
 class Level {
 public:
@@ -289,6 +289,7 @@ public:
 		string username; username.assign(buffer + 2, 64);
 		username.erase(username.find_first_of("\0 \t\r\n", 0, 6));
 		string verKey; verKey.assign(buffer + 66, 64);
+		verKey.erase(verKey.find_first_of(" \t\r\n\0", 0, 5));
 		uint8_t unused = buffer[130];
 
 		logger.info(username + " connected");
