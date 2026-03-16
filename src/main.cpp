@@ -468,8 +468,7 @@ void handlePlayer(SOCKET clientSocket){
 	if(player == nullptr) return;
 
 	// auth checking
-	string expectedKey = md5(serverSalt + player->username);
-	if(player->verKey != expectedKey){
+	if(player->verKey != md5(serverSalt + player->username)){
     	char buf[65] = {};
     	buf[0] = 0x0e;
     	writeMCString(buf + 1, "Login failed!");
