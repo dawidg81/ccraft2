@@ -15,6 +15,7 @@
 #include <random>
 #include <atomic>
 #include <memory>
+#include <functional>
 
 #ifndef _WIN32
 #include <netdb.h>
@@ -465,26 +466,26 @@ public:
 
 	void registerCommand(const string& name, handlerFn fn){
 		commands[name] = fn;
+	}
 
-		bool handle(Player* sender, const string& msg){
-			if(msg.empty() || msg[0] != '/') return false;
+	bool handle(Player* sender, const string& msg){
+		if(msg.empty() || msg[0] != '/') return false;
 
-			commandContext ctx;
-			ctx.sender = sender;
-			istringstream ss(msg.substr(1));
-			string token;
-			while(ss >> token) ctx.args.push_back(token);
-			if(ctx.args.empty()) return true;
+		commandContext ctx;
+		ctx.sender = sender;
+		istringstream ss(msg.substr(1));
+		string token;
+		while(ss >> token) ctx.args.push_back(token);
+		if(ctx.args.empty()) return true;
 
-			string name = ctxargs[0];
-			auto it = commands.find(name);
-			if(it != commands.end()){
-				it->second(ctx);
-			} else {
-				pack.sendMessage(sender, sender, "&cUnknown `" + name + "`")
-			}
-			return true;
+		string name = ctx.args[0];
+		auto it = commands.find(name);
+		if(it != commands.end()){
+			it->second(ctx);
+		} else {
+			pack.sendMessage(sender, sender, "&cUnknown `" + name + "`");
 		}
+		return true;
 	}
 private:
 	map<string, handlerFn> commands;
@@ -691,7 +692,7 @@ void handlePlayer(SOCKET clientSocket){
 					  string msg; msg.assign(buf + 1, 64);
 					  msg.erase(msg.find_last_not_of(' ') + 1);
 
-					  
+					  if (cmdHandler.handle(player, msg)) break;	  
 
 					  logger.info("<" + player->username + "> " + msg);
 
