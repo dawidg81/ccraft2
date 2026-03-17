@@ -16,6 +16,7 @@
 #include <atomic>
 #include <memory>
 #include <functional>
+#include <signal.h>
 
 #ifndef _WIN32
 #include <netdb.h>
@@ -810,6 +811,7 @@ if (::connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
 }
 
 int main(){
+	signal(SIGPIPE, SIG_IGN);
 	logger.showDebug = true;
 	string splash = "ccraft2 v";
 	splash.append(VERSION);
