@@ -459,7 +459,7 @@ struct commandContext {
 	vector<string> args;
 };
 
-class CommandHanlder {
+class CommandHandler {
 public:
 	using handlerFn = function<void(commandContext&)>;
 
