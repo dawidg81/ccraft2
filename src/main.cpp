@@ -27,7 +27,7 @@
 
 using namespace std;
 
-#define VERSION "0.4.0"
+#define VERSION "0.5.3"
 
 Logger logger;
 
@@ -505,14 +505,28 @@ private:
 
 CommandHandler cmdHandler;
 
+void serverShutdown(int sig){
+    logger.info("Shutting down...");
+    {
+        lock_guard<mutex> lock(playersMutex);
+        for(auto& pair : players){
+            pack.sendDisconnect(pair.second, "Game stopped");
+            pair.second->flushQueue();
+        }
+        level.save("world.lvl");
+    }
+    logger.info("Goodbye!");
+    exit(0);
+}
+
 void initCommands(){
 	cmdHandler.registerCommand("kick", [](commandContext& ctx){
 		if(!ctx.sender->isOP){
-			pack.sendMessage(ctx.sender, ctx.sender, "&cYou're not an op");
+			pack.sendMessage(ctx.sender, ctx.sender, "&eYou're not an op!");
 			return;
 		}
 		if(ctx.args.size() < 2){
-			pack.sendMessage(ctx.sender, ctx.sender, "&cUsage: /kick [player name]");
+			pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /kick [player name]");
 			return;
 		}
 		string target = ctx.args[1];
@@ -523,7 +537,29 @@ void initCommands(){
 				return;
 			}
 		}
-		pack.sendMessage(ctx.sender, ctx.sender, "&cPlayer `" + target + "` hasn't been found!");
+		pack.sendMessage(ctx.sender, ctx.sender, "&ePlayer `" + target + "` has been not found!");
+	});
+
+	cmdHandler.registerCommand("shutdown", [](commandContext& ctx){
+		if(!ctx.sender->isOP){
+			pack.sendMessage(ctx.sender, ctx.sender, "&eYou're not an op!");
+			return;
+		}
+		if(ctx.args.size() > 1){
+			pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /shutdown");
+			return;
+		}
+		serverShutdown(0);
+	});
+
+	cmdHandler.registerCommand("help", [](commandContext& ctx){
+		if(ctx.args.size() > 1){
+			pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /help");
+			return;
+		}
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/kick [player] - kick a player");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/shutdown - stops the game");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/help - it is obvious");
 	});
 }
 
@@ -542,16 +578,17 @@ void handlePlayer(SOCKET clientSocket){
 	if(player == nullptr) return;
 
 	// auth checking
+	/*
 	if(player->verKey != md5(serverSalt + player->username)){
-    	char buf[65] = {};
-    	buf[0] = 0x0e;
-    	writeMCString(buf + 1, "Login failed!");
-    	send(clientSocket, buf, sizeof(buf), 0);
-    	logger.err(player->username + " failed authentication");
-    	closesocket(clientSocket);
-    	delete player;
-    	return;
-	}
+    		char buf[65] = {};
+	    	buf[0] = 0x0e;
+	    	writeMCString(buf + 1, "Login failed!");
+	    	send(clientSocket, buf, sizeof(buf), 0);
+	    	logger.err(player->username + " failed authentication");
+	    	closesocket(clientSocket);
+	    	delete player;
+	    	return;
+	}*/
 
 	{
 		lock_guard<mutex> lock(playersMutex);
@@ -821,22 +858,12 @@ if (::connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
 	}
 }
 
-void serverShutdown(int sig){
-    logger.info("Shutting down...");
-    {
-        lock_guard<mutex> lock(playersMutex);
-        for(auto& pair : players){
-            pack.sendDisconnect(pair.second, "Server shutting down");
-            pair.second->flushQueue();
-        }
-        level.save("world.lvl");
-    }
-    logger.info("Goodbye!");
-    exit(0);
-}
-
 int main(){
+#ifndef _WIN32
 	signal(SIGPIPE, SIG_IGN);
+#else
+	signal(SIGFPE, SIG_IGN);
+#endif
 	signal(SIGINT, serverShutdown);
 	signal(SIGTERM, serverShutdown);
 	logger.showDebug = true;
