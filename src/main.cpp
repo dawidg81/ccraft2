@@ -27,7 +27,7 @@
 
 using namespace std;
 
-const string VERSION = "0.5.4";
+const string VERSION = "0.6.0";
 
 Logger logger;
 
@@ -459,6 +459,18 @@ public:
 		target->enqueue(buf, 10);
 	}
 
+	void sendTeleport(Player* p, short x, short y, short z, uint8_t yaw, uint8_t pitch){
+	    char buf[10] = {};
+	    buf[0] = 0x08;
+	    buf[1] = (int8_t)-1;  // -1 = self
+	    buf[2] = (x >> 8) & 0xFF; buf[3] = x & 0xFF;
+	    buf[4] = (y >> 8) & 0xFF; buf[5] = y & 0xFF;
+	    buf[6] = (z >> 8) & 0xFF; buf[7] = z & 0xFF;
+	    buf[8] = yaw;
+	    buf[9] = pitch;
+	    p->enqueue(buf, 10);
+	}
+
 	void sendMessage(Player* p, Player* target, const string& msg){
 		char buf[66] = {};
 		buf[0] = 0x0d;
@@ -571,18 +583,39 @@ void initCommands(){
 			return;
 		}
 
-		pack.sendMessage(ctx.sender, ctx.sender, "&e============INFO==============");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e = Server Info =");
 		pack.sendMessage(ctx.sender, ctx.sender, "&eRunning ccraft2 v" + VERSION);
 	});
+
+	cmdHandler.registerCommand("tp", [](commandContext& ctx){
+	    if(ctx.args.size() < 2){
+	        pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /tp [player]");
+	        return;
+	    }
+	    string targetName = ctx.args[1];
+	    lock_guard<mutex> lock(playersMutex);
+	    for(auto& pair : players){
+	        if(pair.second->username == targetName){
+	            Player* target = pair.second;
+	            pack.sendTeleport(ctx.sender, target->x, target->y, target->z, target->yaw, target->pitch);
+	            pack.sendMessage(ctx.sender, ctx.sender, "&eTeleported to " + targetName);
+	            return;
+	        }
+	    }
+	    pack.sendMessage(ctx.sender, ctx.sender, "&cPlayer `" + targetName + "` not found!");
+	});	
 
 	cmdHandler.registerCommand("help", [](commandContext& ctx){
 		if(ctx.args.size() > 1){
 			pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /help");
 			return;
 		}
+
+		pack.sendMessage(ctx.sender, ctx.sender, "&e * Help * [] = required, <> = optional");
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/kick [player] - kick a player");
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/shutdown - stops the game");
-		pack.sendMessage(ctx.sender, ctx.sender, "&e/help - it is obvious");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/info - show software info");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/help - shows this help");
 	});
 }
 
