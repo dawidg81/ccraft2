@@ -1,46 +1,36 @@
 # ccraft2
-ccraft2 is a Minecraft Classic server software.
+
+ccraft2 is a Minecraft Classic server software
+using Classic Server Protocol.
+
+It's still in development. Any issues can be
+reported in the Issues page of GitHub repository site.
 
 # Build and run
 
-To build this software, run this command at the project root:
-```
+To build this software, run this command at the
+project root:
+
+```bash
 make
 ```
 
-Then run builded program:
+It should create an executable called `ccraft2.exe`
+(even when on Linux). To run it, simply do:
+```bash
+./ccraft2.exe
 ```
-./mcc
-```
+Notice that on Windows, when using PowerShell or
+CMD you should use the `\` (backward slash) instead
+of `/`.
 
-Or if you are on Windows:
-```
-.\ccraft2.exe
-```
+# Usage
 
-# Contributing
+ccraft2 server software is optimized to run with
+multiple clients. You can connect to it with the
+original Minecraft client on version 0.30c or
+[ClassiCube](https://github.com/ClassiCube/ClassiCube)
+client.
 
-Any help with the project is highly appreciated.
-If you want to become a contributor, let me know.
-
-I will try to setup e mail inbox.
-
-## TODO
-
-- [x] Core
-    - [x] Logger
-
-- [ ] Network
-    - [x] Socketer
-    - [ ] Threader
-    - [ ] Packeter
-
-# License
-
-Copyright (C) 2026 dawidg81
-
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>. 
+You can either play the game alone in offline mode
+or online with other players.
