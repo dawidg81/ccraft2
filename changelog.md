@@ -1,3 +1,8 @@
+# 0.8.0
+
+* Added multi-world system. World files are saved in `maps/` directory. New
+commands coming with the new system.
+
 # 0.7.1
 
 * Added variables that in the future will be used for configuration file.

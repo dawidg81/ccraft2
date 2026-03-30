@@ -19,7 +19,11 @@
 #include <signal.h>
 
 #ifndef _WIN32
+#include <windows.h>
 #include <netdb.h>
+#else
+#include <dirent.h>
+#include <sys/stat.h>
 #endif
 
 #include "Logger.hpp"
@@ -27,7 +31,7 @@
 
 using namespace std;
 
-const string VERSION = "0.7.1";
+const string VERSION = "0.8.0";
 
 string confServerName = "ccraft Testing";
 string confServerMotd = "Welcome!";
@@ -221,21 +225,15 @@ public:
 	}
 
 	void unloadIfEmpty(const string& name){
+		if(name == "main") return;
 		lock_guard<mutex> lock(registryMutex);
-		if(name == "main") return; // main level always loaded
-		
-		auto it = levels.find(name);
-		if (it == levels.end()) return;
-
-		lock_guard<mutex> plock(playersMutex);
-		for(auto& pair : players)
-			if(pair.second->currentLevel == name) return;
-
-		it->second->save("maps/" + name + ".lvl");
-		delete it->second;
-		levels.erase(it);
-		logger.info("Unloaded level: " + name);
-	}
+    auto it = levels.find(name);
+    if(it == levels.end()) return;
+    it->second->save("maps/" + name + ".lvl");
+    delete it->second;
+    levels.erase(it);
+    logger.info("Unloaded level: " + name);
+}
 
 	void saveAll(){
 		lock_guard<mutex> lock(registryMutex);
@@ -608,10 +606,85 @@ void serverShutdown(int sig){
             pack.sendDisconnect(pair.second, "Game stopped");
             pair.second->flushQueue();
         }
-        level.save("world.lvl");
+        levelRegistry.saveAll();
     }
     logger.info("Goodbye!");
     exit(0);
+}
+
+vector<string> listLevelFiles() {
+    vector<string> result;
+#ifdef _WIN32
+    WIN32_FIND_DATAA fd;
+    HANDLE hFind = FindFirstFileA("maps\\*.lvl", &fd);
+    if (hFind == INVALID_HANDLE_VALUE) return result;
+    do {
+        string fname = fd.cFileName;
+        result.push_back(fname.substr(0, fname.size() - 4)); // strip .lvl
+    } while (FindNextFileA(hFind, &fd));
+    FindClose(hFind);
+#else
+    DIR* dir = opendir("maps");
+    if (!dir) return result;
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        string fname = entry->d_name;
+        if (fname.size() > 4 && fname.substr(fname.size() - 4) == ".lvl")
+            result.push_back(fname.substr(0, fname.size() - 4));
+    }
+    closedir(dir);
+#endif
+    return result;
+}
+
+void switchWorld(Player* player, const string& targetName){
+	Level* targetLevel = levelRegistry.getOrLoad(targetName);
+	if(!targetLevel){
+		pack.sendMessage(player, player, "&cLevel '" + targetName + "' not found!");
+		return;
+	}
+
+	string oldLevel = player->currentLevel;
+
+	// despawn player for others on old level
+	{
+		lock_guard<mutex> lock(playersMutex);
+		for(auto& pair : players){
+			Player* other = pair.second;
+			if(other->id == player->id) continue;
+			if(other->currentLevel == oldLevel){
+				pack.sendDespawnPlayer(player, other);
+				pack.sendDespawnPlayer(other, player);
+			}
+		}
+	}
+
+	player->currentLevel = targetName;
+
+	pack.sendLevel(player->socket, *targetLevel);
+
+	short spawnX = (targetLevel->sizeX / 2) * 32;
+	short spawnY = (targetLevel->sizeY / 2) * 32 + 51;
+	short spawnZ = (targetLevel->sizeZ / 2) * 32;
+	player->x = spawnX;
+	player->y = spawnY;
+	player->z = spawnZ;
+	pack.sendTeleport(player, spawnX, spawnY, spawnZ, 0, 0);
+
+	// others on new level for new player, new player for them
+	{
+		lock_guard<mutex> lock(playersMutex);
+		for(auto& pair : players){
+			Player* other = pair.second;
+			if(other->id == player->id) continue;
+			if(other->currentLevel == targetName){
+				pack.sendSpawnPlayer(other, player);
+				pack.sendSpawnPlayer(player, other);
+			}
+		}
+	}
+
+	levelRegistry.unloadIfEmpty(oldLevel);
 }
 
 void initCommands(){
@@ -684,10 +757,127 @@ void initCommands(){
 			pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /save");
 			return;
 		}
-		string lvlfilename = "world.lvl";
-		level.save(lvlfilename);
-		pack.sendMessage(ctx.sender, ctx.sender, "&eLevel saved to " + lvlfilename);
+		Level* lvl = levelRegistry.getOrLoad(ctx.sender->currentLevel);
+		if(lvl){
+			string path = "maps/" + ctx.sender->currentLevel + ".lvl";
+			lvl->save(path);
+			pack.sendMessage(ctx.sender, ctx.sender, "&eLevel saved to " + path);
+		}
 	});
+
+	cmdHandler.registerCommand("join", [](commandContext& ctx){
+    if (ctx.args.size() < 2) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /join [level name]");
+        return;
+    }
+    string targetName = ctx.args[1];
+    if (targetName == ctx.sender->currentLevel) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&eYou are already on that level!");
+        return;
+    }
+    switchWorld(ctx.sender, targetName);
+});
+
+cmdHandler.registerCommand("main", [](commandContext& ctx){
+    if (ctx.sender->currentLevel == "main") {
+        pack.sendMessage(ctx.sender, ctx.sender, "&eYou are already on the main level!");
+        return;
+    }
+    switchWorld(ctx.sender, "main");
+});
+
+cmdHandler.registerCommand("new", [](commandContext& ctx){
+    if (!ctx.sender->isOP) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&eYou're not an op!");
+        return;
+    }
+    if (ctx.args.size() < 2) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /new [level name]");
+        return;
+    }
+    string name = ctx.args[1];
+    string path = "maps/" + name + ".lvl";
+
+    ifstream check(path);
+    if (check.good()) {
+        check.close();
+        pack.sendMessage(ctx.sender, ctx.sender, "&cLevel '" + name + "' already exists!");
+        return;
+    }
+
+    Level* lvl = levelRegistry.getOrLoad(name, true); // generate = true
+    if (lvl)
+        pack.sendMessage(ctx.sender, ctx.sender, "&eLevel '" + name + "' created!");
+    else
+        pack.sendMessage(ctx.sender, ctx.sender, "&cFailed to create level '" + name + "'");
+});
+
+cmdHandler.registerCommand("del", [](commandContext& ctx){
+    if (!ctx.sender->isOP) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&eYou're not an op!");
+        return;
+    }
+    if (ctx.args.size() < 2) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /del [level name]");
+        return;
+    }
+    string name = ctx.args[1];
+    if (name == "main") {
+        pack.sendMessage(ctx.sender, ctx.sender, "&cCannot delete the main level!");
+        return;
+    }
+
+    // Kick all players on that level to main first
+    {
+        lock_guard<mutex> lock(playersMutex);
+        for (auto& pair : players) {
+            if (pair.second->currentLevel == name) {
+                pack.sendMessage(pair.second, pair.second, "&cThe level you were on was deleted. Sending you to main.");
+            }
+        }
+    }
+    // switchWorld must be called without playersMutex held
+    vector<Player*> toMove;
+    {
+        lock_guard<mutex> lock(playersMutex);
+        for (auto& pair : players)
+            if (pair.second->currentLevel == name)
+                toMove.push_back(pair.second);
+    }
+    for (Player* p : toMove)
+        switchWorld(p, "main");
+
+    // Unload from registry if loaded
+    {
+        lock_guard<mutex> lock(levelRegistry.registryMutex);
+        auto it = levelRegistry.levels.find(name);
+        if (it != levelRegistry.levels.end()) {
+            delete it->second;
+            levelRegistry.levels.erase(it);
+        }
+    }
+
+    // Delete the file
+    string path = "maps/" + name + ".lvl";
+    if (remove(path.c_str()) == 0)
+        pack.sendMessage(ctx.sender, ctx.sender, "&eLevel '" + name + "' deleted.");
+    else
+        pack.sendMessage(ctx.sender, ctx.sender, "&cFailed to delete level file '" + name + "'");
+});
+
+cmdHandler.registerCommand("wlist", [](commandContext& ctx){
+    vector<string> worlds = listLevelFiles();
+    if (worlds.empty()) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&eNo levels found in maps/");
+        return;
+    }
+    pack.sendMessage(ctx.sender, ctx.sender, "&e = Available Levels =");
+    for (const string& w : worlds) {
+        string line = "&e  " + w;
+        if (w == ctx.sender->currentLevel) line += " &a(you are here)";
+        pack.sendMessage(ctx.sender, ctx.sender, line);
+    }
+});
 
 	cmdHandler.registerCommand("help", [](commandContext& ctx){
 		if(ctx.args.size() > 1){
@@ -701,6 +891,11 @@ void initCommands(){
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/info - show software info");
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/tp [player] - teleport to player");
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/save - saves current level");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/join [level] - join a level");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/main - return to main level");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/new [level] - create a new level (op)");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/del [level] - delete a level (op)");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/wlist - list available levels");
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/help - shows this help");
 	});
 }
@@ -802,7 +997,8 @@ void handlePlayer(SOCKET clientSocket){
 	}).detach();
 
 	pack.sendServerId(clientSocket, name, motd, utype);
-	pack.sendLevel(clientSocket, level);
+	Level* startLevel = levelRegistry.getOrLoad(player->currentLevel);
+	pack.sendLevel(clientSocket, *startLevel);
 
 	{
 	lock_guard<mutex> lock(playersMutex);
@@ -810,15 +1006,17 @@ void handlePlayer(SOCKET clientSocket){
 		pack.sendMessage(player, pair.second, "&e" + player->username + " joined the game");
 	}
 
-	player->x = (level.sizeX / 2) * 32;
-	player->y = (level.sizeY / 2) * 32 + 51;
-	player->z = (level.sizeZ / 2) * 32;
+	player->x = (startLevel->sizeX / 2) * 32;
+	player->y = (startLevel->sizeY / 2) * 32 + 51;
+	player->z = (startLevel->sizeZ / 2) * 32;
+
 	{
 		lock_guard<mutex> lock(playersMutex);
 		for(auto& pair : players){
 			Player* other = pair.second;
 			if(other->id == player->id) continue;
-			pack.sendSpawnPlayer(other, player); // all others -> player
+			if(other->currentLevel != player->currentLevel) continue;
+			pack.sendSpawnPlayer(other, player);
 			pack.sendSpawnPlayer(player, other);
 		}
 	}
@@ -862,11 +1060,13 @@ void handlePlayer(SOCKET clientSocket){
 					  uint8_t blockType = (uint8_t)btbuf[0];
 
 					  uint8_t newBlock = (mode == 0x01) ? blockType : 0x00;
-					  level.setBlock(bx, by, bz, newBlock);
+					  Level* lvl = levelRegistry.getOrLoad(player->currentLevel);
+					  if(lvl) lvl->setBlock(bx, by, bz, newBlock);
 
 					  lock_guard<mutex> lock(playersMutex); 
 					  for(auto& pair : players)
-						  pack.sendSetBlock(pair.second, bx, by, bz, newBlock);
+						  if(pair.second->currentLevel == player-> currentLevel)
+							  pack.sendSetBlock(pair.second, bx, by, bz, newBlock);
 
 					  break;
 				  }
@@ -910,15 +1110,18 @@ void handlePlayer(SOCKET clientSocket){
 		}
 	}
 disconnect:
+	string leftLevel = player->currentLevel;
 	{
 		lock_guard<mutex> lock(playersMutex);
 		players.erase(player->id);
 		for(auto& pair : players){
-			pack.sendDespawnPlayer(player, pair.second);
+			if(pair.second->currentLevel == leftLevel)
+				pack.sendDespawnPlayer(player, pair.second);
 			pack.sendMessage(player, pair.second, "&e" + player->username + " left the game");
 		}
 	}
 
+	levelRegistry.unloadIfEmpty(leftLevel);
 	logger.info(player->username + " disconnected");
 	stopSender->store(true);
 	this_thread::sleep_for(chrono::milliseconds(50));
@@ -929,8 +1132,7 @@ disconnect:
 void saveLoop(){
 	while(true){
 		this_thread::sleep_for(chrono::minutes(5));
-		lock_guard<mutex> lock(playersMutex);
-		level.save("world.lvl");
+		levelRegistry.saveAll();
 	}
 }
 
@@ -1024,15 +1226,12 @@ int main(){
 	splash.append(VERSION);
 	logger.raw(splash);
 
-	ifstream checkFile("world.lvl");
-	if(checkFile.good()){
-		checkFile.close();
-		level.load("world.lvl");
-	} else {
-		checkFile.close();
-		level.newFile();
-		level.save("world.lvl");
-	}
+#ifdef _WIN32
+	CreateDirectoryA("maps", nullptr);
+#else
+	mkdir("maps", 0755);
+#endif
+	levelRegistry.getOrLoad("main", true);
 
 	thread(saveLoop).detach();
 	thread(heartbeat).detach();
