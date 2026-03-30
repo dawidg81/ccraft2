@@ -192,11 +192,61 @@ class LevelRegistry {
 public:
 	mutex registryMutex;
 
-	Level* getOrLoad(const string& name, bool generate = false){}
+	Level* getOrLoad(const string& name, bool generate = false){
+		lock_guard<mutex> lock(registryMutex);
+		auto it = levels.find(name);
+		if(it != levels.end()) return it->second;
 
-	void unloadIfEmpty(const string& name){}
-	void saveAll(){}
-	vector<string> listAvailable(){}
+		string path = "maps/" + name + ".lvl";
+		ifstream check(path);
+		if(check.good()){
+			check.close();
+			Level* lvl = new Level(256, 64, 256);
+			lvl->load(path);
+			levels[name] = lvl;
+			logger.info("Loaded level: " + name);
+			return lvl;
+		}
+
+		if(generate){
+			Level* lvl = new Level(256, 64, 256);
+			lvl->newFile();
+			lvl->save(path);
+			levels[name] = lvl;
+			logger.info("Generated new level: " + name);
+			return lvl;
+		}
+
+		return nullptr;
+	}
+
+	void unloadIfEmpty(const string& name){
+		lock_guard<mutex> lock(registryMutex);
+		if(name == "main") return; // main level always loaded
+		
+		auto it = levels.find(name);
+		if (it == levels.end()) return;
+
+		lock_guard<mutex> plock(playersMutex);
+		for(auto& pair : players)
+			if(pair.second->currentLevel == name) return;
+
+		it->second->save("maps/" + name + ".lvl");
+		delete it->second;
+		levels.erase(it);
+		logger.info("Unloaded level: " + name);
+	}
+
+	void saveAll(){
+		lock_guard<mutex> lock(registryMutex);
+		for(auto& pair : levels)
+			pair.second->save("maps/" + pair.first + ".lvl");
+	}
+
+	vector<string> listAvailable(){
+		vector<string> result;
+		return result;
+	}
 
 	map<string, Level*> levels;
 };
@@ -212,6 +262,7 @@ public:
 	uint8_t id;
 	SOCKET socket;
 
+	string currentLevel;
 	short x, y, z;
 	uint8_t yaw, pitch;
 
@@ -223,6 +274,7 @@ public:
 		socket = sock;
 		x = y = z = yaw = pitch = 0;
 		id = 0;
+		currentLevel = "main";
 	}
 
 	mutex sendMutex;
@@ -508,7 +560,7 @@ public:
 };
 
 Packet pack;
-Level level(256, 64, 256);
+// Level level(256, 64, 256);
 
 struct commandContext {
 	Player* sender;
