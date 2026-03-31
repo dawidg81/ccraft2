@@ -18,12 +18,12 @@
 #include <functional>
 #include <signal.h>
 
-#ifndef _WIN32
+#ifdef _WIN32
 #include <windows.h>
-#include <netdb.h>
 #else
 #include <dirent.h>
 #include <sys/stat.h>
+#include <netdb.h>
 #endif
 
 #include "Logger.hpp"
