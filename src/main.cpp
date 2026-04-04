@@ -31,7 +31,7 @@
 
 using namespace std;
 
-const string VERSION = "0.8.0";
+const string VERSION = "0.9.0";
 
 string confServerName = "ccraft Testing";
 string confServerMotd = "Welcome!";
@@ -694,14 +694,26 @@ void initCommands(){
 			return;
 		}
 		if(ctx.args.size() < 2){
-			pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /kick [player name]");
+			pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /kick [player name] <reason>");
 			return;
 		}
+		
 		string target = ctx.args[1];
+		string reason = "";
+
+		for(size_t i = 2; i < ctx.args.size(); i++){
+			if(i > 2) reason += " ";
+			reason += ctx.args[i];
+		}
+
 		lock_guard<mutex> lock(playersMutex);
 		for(auto& pair : players){
 			if(pair.second->username == target){
-				pack.sendDisconnect(pair.second, "You've been kicked");
+				if(reason.length() > 0){
+					pack.sendDisconnect(pair.second, "You've been kicked. Reason: " + reason);
+				} else {
+					pack.sendDisconnect(pair.second, "You've been kicked");
+				}
 				return;
 			}
 		}
@@ -776,6 +788,13 @@ void initCommands(){
 		return;
 	}
 	switchWorld(ctx.sender, targetName);
+
+	{
+		lock_guard<mutex> lock(playersMutex);
+		for (auto& pair : players) {
+			pack.sendMessage(pair.second, pair.second, "&e" + ctx.sender->username + " went to &b" + targetName);
+		}
+	}
 });
 
 cmdHandler.registerCommand("main", [](commandContext& ctx){
@@ -784,6 +803,14 @@ cmdHandler.registerCommand("main", [](commandContext& ctx){
 		return;
 	}
 	switchWorld(ctx.sender, "main");
+
+	{
+		lock_guard<mutex> lock(playersMutex);
+		for (auto& pair : players) {
+			pack.sendMessage(pair.second, pair.second, "&e" + ctx.sender->username + " went to &bmain level");
+		}
+	}
+
 });
 
 cmdHandler.registerCommand("new", [](commandContext& ctx){
@@ -914,18 +941,16 @@ void handlePlayer(SOCKET clientSocket){
 	Player* player = pack.recvPlayerId(clientSocket);
 	if(player == nullptr) return;
 
-	// auth checking
-	/*
 	if(player->verKey != md5(serverSalt + player->username)){
 			char buf[65] = {};
 			buf[0] = 0x0e;
 			writeMCString(buf + 1, "Login failed!");
 			send(clientSocket, buf, sizeof(buf), 0);
-			logger.err(player->username + " failed authentication");
+			logger.err(player->username + " failed authentication. Key was " + md5(serverSalt + player->username));
 			closesocket(clientSocket);
 			delete player;
 			return;
-	}*/
+	}
 
 	if(player->isBanned){
 		char buf[65] = {};
@@ -1171,7 +1196,7 @@ if (!he) {
 	continue;
 }
 
-int s = ::socket(AF_INET, SOCK_STREAM, SO_REUSEADDR, 0);
+int s = ::socket(AF_INET, SOCK_STREAM, 0);
 if (s < 0) {
 	logger.err("Heartbeat: socket creation failed");
 	this_thread::sleep_for(chrono::minutes(1));

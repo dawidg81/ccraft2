@@ -1,3 +1,7 @@
+# 0.9.0
+
+* `/kick` command now accepts reason as argument.
+
 # 0.8.0
 
 * Added multi-world system. World files are saved in `maps/` directory. New

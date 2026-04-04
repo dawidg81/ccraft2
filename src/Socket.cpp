@@ -29,6 +29,10 @@ int Socket::sockInit()
     service.sin_family = AF_INET;
     service.sin_addr.s_addr = inet_addr(NET_SOCK_ADDR);
     service.sin_port = htons(NET_SOCK_PORT);
+
+    int opt = 1;
+    setsockopt(mainSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
+
     return 0;
 }
 
