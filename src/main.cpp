@@ -31,7 +31,7 @@
 
 using namespace std;
 
-const string VERSION = "0.9.0";
+const string VERSION = "0.10.0";
 
 string confServerName = "ccraft Testing";
 string confServerMotd = "Welcome!";
@@ -119,6 +119,9 @@ string md5(const string& input){
 
 std::string serverSalt = generateSalt();
 
+void backupLevel(const string& name, const string& path);
+int getLatestBackup(const string& name);
+
 class Level {
 public:
 	int sizeX, sizeY, sizeZ;
@@ -170,6 +173,11 @@ public:
 			}
 		}
 		file.close();
+		string levelName = filename;
+		if(levelName.substr(0, 5) == "maps/") levelName = levelName.substr(5);
+		if(levelName.size() > 4 && levelName.substr(levelName.size()-4) == ".lvl")
+			levelName = levelName.substr(0, levelName.size()-4);
+		backupLevel(levelName, filename);
 		logger.info("Level saved to " + filename);
 	}
 
@@ -637,6 +645,44 @@ vector<string> listLevelFiles() {
 	return result;
 }
 
+void backupLevel(const string& name, const string& path){
+	string backupDir = "maps/backups/" + name + ".lvl.d";
+#ifdef _WIN32
+	CreateDirectoryA("maps/backups", nullptr);
+	CreateDirectoryA(backupDir.c_str(), nullptr);
+#else
+	mkdir("maps/backups", 0755);
+	mkdir(backupDir.c_str(), 0755);
+#endif
+
+	int next = 1;
+	while(true){
+		ifstream check(backupDir + "/" + to_string(next) + ".lvl");
+		if(!check.good()) break;
+		next++;
+	}
+
+	ifstream src(path, ios::binary);
+	ofstream dst(backupDir + "/" + to_string(next) + ".lvl", ios::binary);
+	if(src && dst){
+		dst << src.rdbuf();
+		logger.info("Backup " + to_string(next) + " created for level: " + name);
+	} else {
+		logger.err("Failed to create backup for level: " + name);
+	}
+}
+
+int getLatestBackup(const string& name) {
+	string backupDir = "maps/backups/" + name + ".lvl.d";
+	int n = 0;
+	while(true){
+		ifstream check(backupDir + "/" + to_string(n + 1) + ".lvl");
+		if(!check.good()) break;
+		n++;
+	}
+	return n;
+}
+
 void switchWorld(Player* player, const string& targetName){
 	Level* targetLevel = levelRegistry.getOrLoad(targetName);
 	if(!targetLevel){
@@ -906,6 +952,129 @@ cmdHandler.registerCommand("wlist", [](commandContext& ctx){
 	}
 });
 
+// BACKUP CMDS START
+
+cmdHandler.registerCommand("backtp", [](commandContext& ctx){
+    string levelName = ctx.sender->currentLevel;
+    int backupNum = -1; // -1 = latest
+
+    if(ctx.args.size() >= 2) levelName = ctx.args[1];
+    if(ctx.args.size() >= 3) {
+        try { backupNum = stoi(ctx.args[2]); }
+        catch(...) {
+            pack.sendMessage(ctx.sender, ctx.sender, "&cInvalid backup number!");
+            return;
+        }
+    }
+
+    if(backupNum == -1) backupNum = getLatestBackup(levelName);
+    if(backupNum == 0) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&cNo backups found for level '" + levelName + "'");
+        return;
+    }
+
+    string backupPath = "maps/backups/" + levelName + ".lvl.d/" + to_string(backupNum) + ".lvl";
+    ifstream check(backupPath);
+    if(!check.good()) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&cBackup " + to_string(backupNum) + " not found for level '" + levelName + "'");
+        return;
+    }
+    check.close();
+
+    // load backup into a temporary level and send it to just this player
+    Level tmp(256, 64, 256);
+    tmp.load(backupPath);
+    pack.sendLevel(ctx.sender->socket, tmp);
+
+    short spawnX = (tmp.sizeX / 2) * 32;
+    short spawnY = (tmp.sizeY / 2) * 32 + 51;
+    short spawnZ = (tmp.sizeZ / 2) * 32;
+    ctx.sender->x = spawnX;
+    ctx.sender->y = spawnY;
+    ctx.sender->z = spawnZ;
+    pack.sendTeleport(ctx.sender, spawnX, spawnY, spawnZ, 0, 0);
+
+    pack.sendMessage(ctx.sender, ctx.sender, "&eViewing backup " + to_string(backupNum) + " of '" + levelName + "' (read-only view)");
+});
+
+cmdHandler.registerCommand("revert", [](commandContext& ctx){
+    if(!ctx.sender->isOP) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&eYou're not an op!");
+        return;
+    }
+
+    string levelName = ctx.sender->currentLevel;
+    int backupNum = -1;
+
+    if(ctx.args.size() >= 2) levelName = ctx.args[1];
+    if(ctx.args.size() >= 3) {
+        try { backupNum = stoi(ctx.args[2]); }
+        catch(...) {
+            pack.sendMessage(ctx.sender, ctx.sender, "&cInvalid backup number!");
+            return;
+        }
+    }
+
+    int latest = getLatestBackup(levelName);
+
+    // if only level name given (or no args), just print backup count
+    if(ctx.args.size() <= 2 && ctx.args.size() >= 1) {
+        if(latest == 0)
+            pack.sendMessage(ctx.sender, ctx.sender, "&eNo backups found for level '" + levelName + "'");
+        else
+            pack.sendMessage(ctx.sender, ctx.sender, "&eLevel '" + levelName + "' has " + to_string(latest) + " backup(s)");
+        return;
+    }
+
+    if(backupNum == -1) backupNum = latest;
+    if(backupNum == 0) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&cNo backups found for level '" + levelName + "'");
+        return;
+    }
+
+    string backupPath = "maps/backups/" + levelName + ".lvl.d/" + to_string(backupNum) + ".lvl";
+    ifstream check(backupPath);
+    if(!check.good()) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&cBackup " + to_string(backupNum) + " not found for level '" + levelName + "'");
+        return;
+    }
+    check.close();
+
+    Level* lvl = levelRegistry.getOrLoad(levelName);
+    if(!lvl) {
+        pack.sendMessage(ctx.sender, ctx.sender, "&cLevel '" + levelName + "' is not loaded!");
+        return;
+    }
+
+    lvl->load(backupPath);
+
+    // save as new version (this also creates a backup of the reverted state)
+    int next = latest + 1;
+    string newPath = "maps/" + levelName + ".lvl";
+    lvl->save(newPath);
+
+    // resend level to all players on it
+    {
+        lock_guard<mutex> lock(playersMutex);
+        for(auto& pair : players) {
+            if(pair.second->currentLevel == levelName) {
+                pack.sendLevel(pair.second->socket, *lvl);
+                short spawnX = (lvl->sizeX / 2) * 32;
+                short spawnY = (lvl->sizeY / 2) * 32 + 51;
+                short spawnZ = (lvl->sizeZ / 2) * 32;
+                pair.second->x = spawnX;
+                pair.second->y = spawnY;
+                pair.second->z = spawnZ;
+                pack.sendTeleport(pair.second, spawnX, spawnY, spawnZ, 0, 0);
+            }
+        }
+    }
+
+    pack.sendMessage(ctx.sender, ctx.sender, "&eLevel '" + levelName + "' reverted to backup " + to_string(backupNum) + " (saved as backup " + to_string(next) + ")");
+});
+
+// BACKUP CMDS END
+
 	cmdHandler.registerCommand("help", [](commandContext& ctx){
 		if(ctx.args.size() > 1){
 			pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /help");
@@ -923,6 +1092,8 @@ cmdHandler.registerCommand("wlist", [](commandContext& ctx){
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/new [level] - create a new level (op)");
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/del [level] - delete a level (op)");
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/wlist - list available levels");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/backtp <level> <n> - view backup of a level");
+		pack.sendMessage(ctx.sender, ctx.sender, "&e/revert <level> <n> - revert level to backup (op)");
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/help - shows this help");
 	});
 }

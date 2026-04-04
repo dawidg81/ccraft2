@@ -1,3 +1,7 @@
+# 0.10.0
+
+* Added backup system for worlds. Added `backtp` and `revert` commands.
+
 # 0.9.0
 
 * `/kick` command now accepts reason as argument.
