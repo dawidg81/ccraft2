@@ -79,3 +79,9 @@ SOCKET Socket::sockAccept()
     log.info("Client connected");
     return client;
 }
+
+void Socket::sockClose(){
+	running = false;
+	closesocket(mainSocket);
+	mainSocket = INVALID_SOCKET;
+}

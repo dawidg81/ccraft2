@@ -29,5 +29,6 @@ public:
     int sockInit();
     int sockBind();
     int sockListen();
+    void sockClose();
     SOCKET sockAccept();
 };

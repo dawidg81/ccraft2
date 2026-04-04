@@ -1,3 +1,7 @@
+# 0.10.1
+
+* Fixed server socket: no more `Accept failed` errors.
+
 # 0.10.0
 
 * Added backup system for worlds. Added `backtp` and `revert` commands.

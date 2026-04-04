@@ -31,7 +31,8 @@
 
 using namespace std;
 
-const string VERSION = "0.10.0";
+const string VERSION = "0.10.1";
+Socket serverSocket;
 
 string confServerName = "ccraft Testing";
 string confServerMotd = "Welcome!";
@@ -617,6 +618,7 @@ void serverShutdown(int sig){
 		levelRegistry.saveAll();
 	}
 	logger.info("Goodbye!");
+	serverSocket.sockClose();
 	exit(0);
 }
 
@@ -1434,14 +1436,14 @@ int main(){
 
 	initCommands();
 
-	Socket socket;
-	socket.sockInit();
-	socket.sockBind();
-	socket.sockListen();
+	// Socket socket; // is now global
+	serverSocket.sockInit();
+	serverSocket.sockBind();
+	serverSocket.sockListen();
 
-	socket.running = true;
-	while(socket.running){
-		SOCKET clientSocket = socket.sockAccept();
+	serverSocket.running = true;
+	while(serverSocket.running){
+		SOCKET clientSocket = serverSocket.sockAccept();
 		if(clientSocket == INVALID_SOCKET) continue;
 
 		thread(handlePlayer, clientSocket).detach();
