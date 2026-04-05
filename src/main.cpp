@@ -387,7 +387,7 @@ public:
 		string username; username.assign(buffer + 2, 64);
 		//username.erase(username.find_first_of(string("\0 \t\r\n", 0, 6));
 		auto upos = username.find_first_of(string("\0 \t\r\n", 5));
-		if(upos != string::nposi) username.erase(upos);
+		if(upos != string::npos) username.erase(upos);
 
 		string verKey; verKey.assign(buffer + 66, 64);
 		//verKey.erase(verKey.find_first_of(" \t\r\n\0", 0, 5));
