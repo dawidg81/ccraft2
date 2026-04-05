@@ -31,7 +31,7 @@
 
 using namespace std;
 
-const string VERSION = "0.10.2";
+const string VERSION = "0.10.3";
 Socket serverSocket;
 
 string confServerName = "ccraft Testing";
@@ -385,9 +385,15 @@ public:
 		// uint8_t packID = buffer[0];
 		// uint8_t protVer = buffer[1];
 		string username; username.assign(buffer + 2, 64);
-		username.erase(username.find_first_of("\0 \t\r\n", 0, 6));
+		//username.erase(username.find_first_of(string("\0 \t\r\n", 0, 6));
+		auto upos = username.find_first_of(string("\0 \t\r\n", 5));
+		if(upos != string::nposi) username.erase(upos);
+
 		string verKey; verKey.assign(buffer + 66, 64);
-		verKey.erase(verKey.find_first_of(" \t\r\n\0", 0, 5));
+		//verKey.erase(verKey.find_first_of(" \t\r\n\0", 0, 5));
+		auto vpos = verKey.find_first_of(string(" \t\r\n\0", 5));
+		if(vpos != string::npos) verKey.erase(vpos);
+
 		uint8_t unused = buffer[130];
 
 		logger.info(username + " connected");
