@@ -31,7 +31,7 @@
 
 using namespace std;
 
-const string VERSION = "0.10.3";
+const string VERSION = "0.10.4";
 Socket serverSocket;
 
 string confServerName = "ccraft Testing";
@@ -127,6 +127,7 @@ class Level {
 public:
 	int sizeX, sizeY, sizeZ;
 	vector<uint8_t> blocks;
+	atomic<bool> dirty{false};
 
 	Level(int x, int y, int z) : sizeX(x), sizeY(y), sizeZ(z){
 		blocks.resize(x * y * z, 0x00);
@@ -135,6 +136,7 @@ public:
 	void setBlock(int x, int y, int z, uint8_t id){
 		if(x < 0 || x>= sizeX || y < 0 || y >= sizeY || z < 0 || z >= sizeZ) return;
 		blocks[x + z * sizeX + y * sizeX * sizeZ] = id;
+		dirty = true;
 	}
 
 	uint8_t getBlock(int x, int y, int z){
@@ -1334,8 +1336,14 @@ void saveLoop(){
 		levelRegistry.saveAll();
 
 		lock_guard<mutex> lock(levelRegistry.registryMutex);
-		for(auto& pair : levelRegistry.levels)
-			backupLevel(pair.first, "maps/" + pair.first + ".lvl");
+		for(auto& pair : levelRegistry.levels){
+			string path = "maps/" + pair.first + ".lvl";
+			pair.second->save(path);
+			if(pair.second->dirty){
+				backupLevel(pair.first, path);
+				pair.second->dirty = false;
+			}
+		}
 	}
 }
 

@@ -1,3 +1,12 @@
+# 0.10.4
+
+* Fixed world backup system. Backups are now saved only if block changes in map
+are detected. Even less disk flooding.
+
+# 0.10.3
+
+* Fixed server crash on joining from c0.30 clients.
+
 # 0.10.2
 
 * Automatic level backups are now being done every 5 minutes instead of each
