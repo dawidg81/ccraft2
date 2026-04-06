@@ -1,3 +1,7 @@
+# 0.11.2
+
+* Added text wrapping if doesn't fit in 64 character row.
+
 # 0.11.1
 
 * Fixed compilation errors. Missing `<algorithm>` header.

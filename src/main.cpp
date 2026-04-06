@@ -32,7 +32,7 @@
 
 using namespace std;
 
-const string VERSION = "0.11.1";
+const string VERSION = "0.11.2";
 Socket serverSocket;
 
 string confServerName = "ccraft Testing";
@@ -553,13 +553,33 @@ public:
 	}
 
 	void sendMessage(Player* p, Player* target, const string& msg){
-		char buf[66] = {};
-		buf[0] = 0x0d;
-		buf[1] = (int8_t)p->id;
-		writeMCString(buf +2, msg);
-		// send(socket, buf, sizeof(buf), 0);
-		target->enqueue(buf, 66);
-	}
+	    const int MAX = 64;
+	    string text = msg;
+
+	    while(!text.empty()){
+	        string line;
+	        if((int)text.size() <= MAX){
+	            line = text;
+	            text = "";
+	        } else {
+	            int cut = MAX;
+	            for(int i = MAX - 1; i >= 0; i--){
+	                if(text[i] == ' '){
+	                    cut = i;
+	                    break;
+	                }
+	            }
+	            line = text.substr(0, cut);
+	            text = text.substr(cut == MAX ? cut : cut + 1);
+	        }
+
+        	char buf[66] = {};
+	        buf[0] = 0x0d;
+	        buf[1] = (int8_t)p->id;
+	        writeMCString(buf + 2, line);
+	        target->enqueue(buf, 66);
+	    }
+	}	
 
 	void sendDisconnect(Player* p, const string& reason){
 		char buf[65] = {};
