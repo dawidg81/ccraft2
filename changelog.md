@@ -1,3 +1,7 @@
+# 0.11.1
+
+* Fixed compilation errors. Missing `<algorithm>` header.
+
 # 0.11.0
 
 * Updated commands construction. Now each command contains system name, usage description, short and long description.

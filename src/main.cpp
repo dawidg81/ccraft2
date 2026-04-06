@@ -17,6 +17,7 @@
 #include <memory>
 #include <functional>
 #include <signal.h>
+#include <algorithm>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -31,7 +32,7 @@
 
 using namespace std;
 
-const string VERSION = "0.11.0";
+const string VERSION = "0.11.1";
 Socket serverSocket;
 
 string confServerName = "ccraft Testing";
