@@ -1,3 +1,7 @@
+# 0.11.0
+
+* Updated commands construction. Now each command contains system name, usage description, short and long description.
+
 # 0.10.4
 
 * Fixed world backup system. Backups are now saved only if block changes in map

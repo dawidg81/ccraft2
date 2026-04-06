@@ -31,7 +31,7 @@
 
 using namespace std;
 
-const string VERSION = "0.10.4";
+const string VERSION = "0.11.0";
 Socket serverSocket;
 
 string confServerName = "ccraft Testing";
@@ -573,94 +573,110 @@ Packet pack;
 // Level level(256, 64, 256);
 
 struct commandContext {
-	Player* sender;
-	vector<string> args;
+    Player* sender;
+    vector<string> args;
 };
-
-struct CommandMeta {
-	string usage;
-	string shortDesc;
-	string desc;
-	handlerFn fn;
-}
 
 class CommandHandler {
 public:
-	using handlerFn = function<void(commandContext&)>;
+    using handlerFn = function<void(commandContext&)>;
 
-	void registerCommand(
-			const string& name,
-			const string& usage,
-			const string& shortDesc,
-			const string& desc,
-			handlerFn fn){
-		commands[name] = {usage, shortDesc, desc, fn};
-	}
+    struct CommandMeta {
+        string usage;
+        string shortDesc;
+        string desc;
+        handlerFn fn;
+        CommandMeta() {}
+        CommandMeta(const string& u, const string& s, const string& d, handlerFn f)
+            : usage(u), shortDesc(s), desc(d), fn(f) {}
+    };
 
-	bool handle(Player* sender, const string& msg){
-		if(msg.empty() || msg[0] != '/') return false;
+    void registerCommand(const string& name, const string& usage,
+                         const string& shortDesc, const string& desc, handlerFn fn){
+        commands[name] = CommandMeta(usage, shortDesc, desc, fn);
+    }
 
-		commandContext ctx;
-		ctx.sender = sender;
-		istringstream ss(msg.substr(1));
-		string token;
-		while(ss >> token) ctx.args.push_back(token);
-		if(ctx.args.empty()) return true;
+    bool handle(Player* sender, const string& msg){
+        if(msg.empty() || msg[0] != '/') return false;
 
-		string name = ctx.args[0];
-		auto it = commands.find(name);
-		if(it != commands.end()){
-			it->second.fn(ctx);
-		} else {
-			pack.sendMessage(sender, sender, "&cUnknown `" + name + "`");
-		}
-		return true;
-	}
+        commandContext ctx;
+        ctx.sender = sender;
+        istringstream ss(msg.substr(1));
+        string token;
+        while(ss >> token) ctx.args.push_back(token);
+        if(ctx.args.empty()) return true;
 
-void registerHelp(){
-    registerCommand("help", "/help <command>", "Show help", "Without arguments, lists all commands (paginated, 8 per page). With a command name, shows its usage and full description.", [this](commandContext& ctx){
-        const int PAGE_SIZE = 8;
-
-        if(ctx.args.size() >= 2){
-            string name = ctx.args[1];
-            auto it = commands.find(name);
-            if(it == commands.end()){
-                pack.sendMessage(ctx.sender, ctx.sender, "&cUnknown command: " + name);
-                return;
-            }
-            auto& m = it->second;
-            pack.sendMessage(ctx.sender, ctx.sender, "&e-- Help: /" + name + " --");
-            pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: " + m.usage);
-            pack.sendMessage(ctx.sender, ctx.sender, "&e" + m.desc);
-            return;
+        string name = ctx.args[0];
+        auto it = commands.find(name);
+        if(it != commands.end()){
+            it->second.fn(ctx);
+        } else {
+            pack.sendMessage(sender, sender, "&cUnknown `" + name + "`");
         }
+        return true;
+    }
 
-        int page = 1;
-        if(ctx.args.size() == 2){
-            try { page = stoi(ctx.args[1]); } catch(...) {}
-        }
+    void registerHelp(){
+        registerCommand("help", "/help <command|page>", "Show help",
+            "Without arguments, lists all commands paginated (8 per page). "
+            "Pass a page number to go to that page, or a command name to see its full description.",
+            [this](commandContext& ctx){
+                const int PAGE_SIZE = 8;
 
-        vector<pair<string, CommandMeta*>> sorted;
-        for(auto& pair : commands) sorted.push_back({pair.first, &pair.second});
-        sort(sorted.begin(), sorted.end(), [](auto& a, auto& b){ return a.first < b.first; });
+                if(ctx.args.size() >= 2){
+                    string arg = ctx.args[1];
+                    bool isNum = !arg.empty() && arg.find_first_not_of("0123456789") == string::npos;
 
-        int totalPages = max(1, (int)((sorted.size() + PAGE_SIZE - 1) / PAGE_SIZE));
-        if(page < 1) page = 1;
-        if(page > totalPages) page = totalPages;
+                    if(!isNum){
+                        auto it = commands.find(arg);
+                        if(it == commands.end()){
+                            pack.sendMessage(ctx.sender, ctx.sender, "&cUnknown command: " + arg);
+                            return;
+                        }
+                        CommandMeta& m = it->second;
+                        pack.sendMessage(ctx.sender, ctx.sender, "&e-- Help: /" + arg + " --");
+                        pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: " + m.usage);
+                        pack.sendMessage(ctx.sender, ctx.sender, "&e" + m.desc);
+                        return;
+                    }
 
-        pack.sendMessage(ctx.sender, ctx.sender, "&e-- Commands (page " + to_string(page) + "/" + to_string(totalPages) + ") --");
-        int start = (page - 1) * PAGE_SIZE;
-        int end = min(start + PAGE_SIZE, (int)sorted.size());
-        for(int i = start; i < end; i++){
-            auto& [name, meta] = sorted[i];
-            pack.sendMessage(ctx.sender, ctx.sender, "&e/" + name + " &f- " + meta->shortDesc);
-        }
-        if(page < totalPages)
-            pack.sendMessage(ctx.sender, ctx.sender, "&eType /help " + to_string(page + 1) + " for next page");
-    });
-}
+                    // fall through to pagination
+                }
+
+                int page = 1;
+                if(ctx.args.size() >= 2){
+                    try { page = stoi(ctx.args[1]); } catch(...) { page = 1; }
+                }
+
+                vector<pair<string, CommandMeta*> > sorted;
+                for(auto& p : commands) sorted.push_back(make_pair(p.first, &p.second));
+                sort(sorted.begin(), sorted.end(),
+                    [](const pair<string,CommandMeta*>& a, const pair<string,CommandMeta*>& b){
+                        return a.first < b.first;
+                    });
+
+                int total = (int)sorted.size();
+                int totalPages = max(1, (total + PAGE_SIZE - 1) / PAGE_SIZE);
+                if(page < 1) page = 1;
+                if(page > totalPages) page = totalPages;
+
+                pack.sendMessage(ctx.sender, ctx.sender,
+                    "&e-- Commands (page " + to_string(page) + "/" + to_string(totalPages) + ") --");
+
+                int start = (page - 1) * PAGE_SIZE;
+                int end = min(start + PAGE_SIZE, total);
+                for(int i = start; i < end; i++){
+                    pack.sendMessage(ctx.sender, ctx.sender,
+                        "&e/" + sorted[i].first + " &f- " + sorted[i].second->shortDesc);
+                }
+                if(page < totalPages)
+                    pack.sendMessage(ctx.sender, ctx.sender,
+                        "&eType /help " + to_string(page + 1) + " for next page");
+            });
+    }
+
 private:
-	map<string, CommandMeta> commands;
+    map<string, CommandMeta> commands;
 };
 
 CommandHandler cmdHandler;
@@ -912,6 +928,9 @@ void initCommands(){
 
 	cmdHandler.registerCommand(
 			"join",
+			"/join [level name]",
+			"Join a world",
+			"Loads given level",
 			[](commandContext& ctx){
 	if (ctx.args.size() < 2) {
 		pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /join [level name]");
@@ -932,7 +951,12 @@ void initCommands(){
 	}
 });
 
-cmdHandler.registerCommand("main", [](commandContext& ctx){
+cmdHandler.registerCommand(
+		"main",
+		"/main",
+		"Go to main level",
+		"Sends you back to main level",
+		[](commandContext& ctx){
 	if (ctx.sender->currentLevel == "main") {
 		pack.sendMessage(ctx.sender, ctx.sender, "&eYou are already on the main level!");
 		return;
@@ -948,7 +972,12 @@ cmdHandler.registerCommand("main", [](commandContext& ctx){
 
 });
 
-cmdHandler.registerCommand("new", [](commandContext& ctx){
+cmdHandler.registerCommand(
+		"new",
+		"/new [level name]",
+		"Create new world",
+		"Creates new world and world file with given name. OP only.",
+		[](commandContext& ctx){
 	if (!ctx.sender->isOP) {
 		pack.sendMessage(ctx.sender, ctx.sender, "&eYou're not an op!");
 		return;
@@ -974,7 +1003,12 @@ cmdHandler.registerCommand("new", [](commandContext& ctx){
 		pack.sendMessage(ctx.sender, ctx.sender, "&cFailed to create level '" + name + "'");
 });
 
-cmdHandler.registerCommand("del", [](commandContext& ctx){
+cmdHandler.registerCommand(
+		"del",
+		"/del [level name]",
+		"Delete a world",
+		"Deletes a world with world file with given name. Backup files remain. OP only",
+		[](commandContext& ctx){
 	if (!ctx.sender->isOP) {
 		pack.sendMessage(ctx.sender, ctx.sender, "&eYou're not an op!");
 		return;
@@ -1027,7 +1061,12 @@ cmdHandler.registerCommand("del", [](commandContext& ctx){
 		pack.sendMessage(ctx.sender, ctx.sender, "&cFailed to delete level file '" + name + "'");
 });
 
-cmdHandler.registerCommand("wlist", [](commandContext& ctx){
+cmdHandler.registerCommand(
+		"wlist",
+		"/wlist",
+		"Lists worlds",
+		"Gives a list of available worlds to join",
+		[](commandContext& ctx){
 	vector<string> worlds = listLevelFiles();
 	if (worlds.empty()) {
 		pack.sendMessage(ctx.sender, ctx.sender, "&eNo levels found in maps/");
@@ -1043,7 +1082,12 @@ cmdHandler.registerCommand("wlist", [](commandContext& ctx){
 
 // BACKUP CMDS START
 
-cmdHandler.registerCommand("backtp", [](commandContext& ctx){
+cmdHandler.registerCommand(
+		"backtp",
+		"/backtp [level name] <backup number>",
+		"Browse through backup files",
+		"Brings player to a backup file with given number from given level. If backup number not given, uses last backup file. At least level name needed.",
+		[](commandContext& ctx){
     string levelName = ctx.sender->currentLevel;
     int backupNum = -1; // -1 = latest
 
@@ -1086,7 +1130,12 @@ cmdHandler.registerCommand("backtp", [](commandContext& ctx){
     pack.sendMessage(ctx.sender, ctx.sender, "&eViewing backup " + to_string(backupNum) + " of '" + levelName + "' (read-only view)");
 });
 
-cmdHandler.registerCommand("revert", [](commandContext& ctx){
+cmdHandler.registerCommand(
+		"revert",
+		"/revert <level name> <backup number>",
+		"Revert world to backup",
+		"Reverts world file with given level name to a backup file of given backup number. If level name and backup number not given, shows number of saved backups of current level. If backup number not given, reverts given level to last backup. Backup numbers don't change. OP only.",
+		[](commandContext& ctx){
     if(!ctx.sender->isOP) {
         pack.sendMessage(ctx.sender, ctx.sender, "&eYou're not an op!");
         return;
@@ -1163,7 +1212,7 @@ cmdHandler.registerCommand("revert", [](commandContext& ctx){
 });
 
 // BACKUP CMDS END
-
+/*
 	cmdHandler.registerCommand("help", [](commandContext& ctx){
 		if(ctx.args.size() > 1){
 			pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /help");
@@ -1184,7 +1233,8 @@ cmdHandler.registerCommand("revert", [](commandContext& ctx){
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/backtp <level> <n> - view backup of a level");
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/revert <level> <n> - revert level to backup (op)");
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/help - shows this help");
-	});
+	});*/
+	cmdHandler.registerHelp();
 }
 
 bool recvExact(SOCKET socket, char* buf, int len){
