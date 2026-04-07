@@ -1,3 +1,7 @@
+# 0.12.0
+
+* Now more advanced world file format.
+
 # 0.11.2
 
 * Added text wrapping if doesn't fit in 64 character row.
