@@ -157,44 +157,95 @@ public:
 	}
 
 	void save(const string& filename){
-		ofstream file(filename, ios::binary);
-		if(!file){logger.err("Failed to open level file for writing: " + filename); return;}
+	    ofstream file(filename, ios::binary);
+	    if(!file){logger.err("Failed to open level file for writing: " + filename); return;}
 
-		for(int iy=0; iy < sizeY; iy++){
-			for(int iz=0; iz < sizeZ; iz++){
-				for(int ix=0; ix < sizeX; ix++){
-					uint8_t id = getBlock(ix, iy, iz);
-					if(id == 0x00) continue;
+	    // Magic bytes
+	    file.write("CCRMCLVL", 8);
 
-					uint8_t entry[7];
-					entry[0] = (ix >> 8) & 0xFF; entry[1] = ix & 0xFF;
-					entry[2] = (iy >> 8) & 0xFF; entry[3] = iy & 0xFF;
-					entry[4] = (iz >> 8) & 0xFF; entry[5] = iz & 0xFF;
-					entry[6] = id;
-					file.write((char*)entry, 7);
-				}
-			}
-		}
-		file.close();
-		logger.info("Level saved to " + filename);
+	    // World mode: finite
+	    uint8_t mode = 0x00;
+	    file.write((char*)&mode, 1);
+
+	    // World boundaries (3 shorts, big-endian)
+	    uint8_t bounds[6];
+	    bounds[0] = (sizeX >> 8) & 0xFF; bounds[1] = sizeX & 0xFF;
+	    bounds[2] = (sizeY >> 8) & 0xFF; bounds[3] = sizeY & 0xFF;
+	    bounds[4] = (sizeZ >> 8) & 0xFF; bounds[5] = sizeZ & 0xFF;
+	    file.write((char*)bounds, 6);
+
+	    // Block array: chunk-order (chunk increments x, then z, then y;
+	    // blocks inside chunk increment x, then z, then y)
+	    int chunksX = (sizeX + 15) / 16;
+	    int chunksY = (sizeY + 15) / 16;
+	    int chunksZ = (sizeZ + 15) / 16;
+
+	    for(int cy = 0; cy < chunksY; cy++)
+	    for(int cz = 0; cz < chunksZ; cz++)
+	    for(int cx = 0; cx < chunksX; cx++)
+	    for(int ly = 0; ly < 16; ly++)
+	    for(int lz = 0; lz < 16; lz++)
+	    for(int lx = 0; lx < 16; lx++){
+	        int wx = cx*16 + lx;
+	        int wy = cy*16 + ly;
+	        int wz = cz*16 + lz;
+	        uint8_t id = (wx < sizeX && wy < sizeY && wz < sizeZ) ? getBlock(wx, wy, wz) : 0x00;
+	        file.write((char*)&id, 1);
+	    }
+
+	    file.close();
+	    logger.info("Level saved to " + filename);
 	}
 
 	void load(const string& filename){
-		ifstream file(filename, ios::binary);
-		if(!file){logger.err("Failed to open level file: " + filename); return;}
+	    ifstream file(filename, ios::binary);
+	    if(!file){logger.err("Failed to open level file: " + filename); return;}
 
-		fill(blocks.begin(), blocks.end(), 0x00);
+	    // Magic bytes
+	    char magic[8];
+	    if(!file.read(magic, 8) || memcmp(magic, "CCRMCLVL", 8) != 0){
+	        logger.err("Invalid level file (bad magic): " + filename);
+	        return;
+	    }
 
-		uint8_t entry[7];
-		while(file.read((char*)entry, 7)){
-			int ix = (entry[0] << 8) | entry[1];
-			int iy = (entry[2] << 8) | entry[3];
-			int iz = (entry[4] << 8) | entry[5];
-			uint8_t id = entry[6];
-			setBlock(ix, iy, iz, id);
-		}
-		file.close();
-		logger.info("Level loaded from " + filename);
+	    // World mode
+	    uint8_t mode = 0;
+	    file.read((char*)&mode, 1);
+	    if(mode != 0x00){
+	        logger.err("Unsupported world mode 0x" + to_string(mode) + " in: " + filename);
+	        return;
+	    }
+
+	    // World boundaries
+	    uint8_t bounds[6];
+	    file.read((char*)bounds, 6);
+	    sizeX = (bounds[0] << 8) | bounds[1];
+	    sizeY = (bounds[2] << 8) | bounds[3];
+	    sizeZ = (bounds[4] << 8) | bounds[5];
+	    blocks.assign(sizeX * sizeY * sizeZ, 0x00);
+
+	    // Block array
+	    int chunksX = (sizeX + 15) / 16;
+	    int chunksY = (sizeY + 15) / 16;
+	    int chunksZ = (sizeZ + 15) / 16;
+
+	    for(int cy = 0; cy < chunksY; cy++)
+	    for(int cz = 0; cz < chunksZ; cz++)
+	    for(int cx = 0; cx < chunksX; cx++)
+	    for(int ly = 0; ly < 16; ly++)
+	    for(int lz = 0; lz < 16; lz++)
+	    for(int lx = 0; lx < 16; lx++){
+	        uint8_t id = 0;
+	        file.read((char*)&id, 1);
+	        int wx = cx*16 + lx;
+	        int wy = cy*16 + ly;
+	        int wz = cz*16 + lz;
+	        if(wx < sizeX && wy < sizeY && wz < sizeZ)
+	            setBlock(wx, wy, wz, id);
+	    }
+
+	    file.close();
+	    logger.info("Level loaded from " + filename);
 	}
 };
 
