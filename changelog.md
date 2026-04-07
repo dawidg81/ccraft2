@@ -1,3 +1,15 @@
+# 0.11.2
+
+* Added text wrapping if doesn't fit in 64 character row.
+
+# 0.11.1
+
+* Fixed compilation errors. Missing `<algorithm>` header.
+
+# 0.11.0
+
+* Updated commands construction. Now each command contains system name, usage description, short and long description.
+
 # 0.10.4
 
 * Fixed world backup system. Backups are now saved only if block changes in map
