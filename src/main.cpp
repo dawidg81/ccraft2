@@ -32,7 +32,7 @@
 
 using namespace std;
 
-const string VERSION = "0.11.2";
+const string VERSION = "0.12.0";
 Socket serverSocket;
 
 string confServerName = "ccraft Testing";
