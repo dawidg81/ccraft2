@@ -137,3 +137,8 @@ admin abilities to the server. to do that, create a new `ops.txt` file next to
 the executable, then write in your nickname. Each nickname each line. You may
 also want to add `blacklist.txt` to prevent some players from joining to the
 server. These both `.txt` files should be located next to the server executable.
+
+# License
+
+ccraft2 is licensed under MIT License. It can be found in
+[here](LICENSE).
