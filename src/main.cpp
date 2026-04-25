@@ -18,7 +18,6 @@
 #include <functional>
 #include <signal.h>
 #include <algorithm>
-#include <list>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -492,7 +491,6 @@ void serverShutdown(int sig){
 			pair.second->flushQueue();
 		}
 		levelRegistry.saveAll();
-		levelRegistry.saveAllInfinite();
 	}
 	logger.info("Goodbye!");
 	serverSocket.sockClose();
@@ -563,13 +561,7 @@ int getLatestBackup(const string& name) {
 }
 
 void switchWorld(Player* player, const string& targetName){
-	Level* targetLevel;
-	if(levelRegistry.isInfinite(targetName)){
-		InfiniteLevel* targetInfLevel = levelRegistry.getOrCreateInfinite(targetName);\
-		targetLevel = targetInfLevel->getBigChunk(player->x, player->z);
-	} else {
-		targetLevel = levelRegistry.getOrLoad(targetName);
-	}
+	Level* targetLevel = levelRegistry.getOrLoad(targetName);
 	if(!targetLevel){
 		pack.sendMessage(player, player, "&cLevel '" + targetName + "' not found!");
 		return;
@@ -1277,7 +1269,6 @@ void saveLoop(){
 	while(true){
 		this_thread::sleep_for(chrono::minutes(5));
 		levelRegistry.saveAll();
-		levelRegistry.saveAllInfinite();
 
 		lock_guard<mutex> lock(levelRegistry.registryMutex);
 		for(auto& pair : levelRegistry.levels){
@@ -1397,11 +1388,6 @@ int main(){
 	serverSocket.sockInit();
 	serverSocket.sockBind();
 	serverSocket.sockListen();
-
-	//testing j
-	InfiniteLevel* test = levelRegistry.getOrCreateInfinite("infinitetest");
-	Level* bc = test->getBigChunk(0, 0);
-	logger.info("Smoke test: block at (128,31,128) = " + to_string(bc->getBlock(128,31,128)));
 
 	serverSocket.running = true;
 	while(serverSocket.running){
