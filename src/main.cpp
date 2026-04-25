@@ -38,7 +38,7 @@
 using namespace std;
 
 Socket serverSocket;
-Logger logger;
+// Logger logger;
 
 void backupLevel(const string& name, const string& path);
 int getLatestBackup(const string& name);

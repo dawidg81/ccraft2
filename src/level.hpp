@@ -1,3 +1,5 @@
+#include "Logger.hpp"
+Logger logger;
 #pragma once
 
 void backupLevel(const string& name, const string& path);
