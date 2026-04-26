@@ -1,3 +1,4 @@
+#pragma once
 #include <mutex>
 #include <map>
 #include <queue>
@@ -5,7 +6,11 @@
 #include <map>
 #include <queue>
 #include <vector>
-#pragma once
+#include <fstream>
+#include "utils.hpp"
+#include "Socket.hpp"
+
+using namespace std;
 
 class Player {
 public:
@@ -86,17 +91,17 @@ public:
 	}
 };
 
-mutex playersMutex;
-map<uint8_t, Player*> players;
+extern mutex playersMutex;
+extern map<uint8_t, Player*> players;
 
-uint8_t assignId(){
+inline uint8_t assignId(){
 	for(uint8_t i = 0; i < 127; i++){
 		if(players.find(i) == players.end()) return i;
 	}
 	return 255;
 }
 
-bool isPlayerOP(const string& username){
+inline bool isPlayerOP(const string& username){
 	ifstream file("ops.txt");
 	if(!file) return false;
 	string line;
@@ -107,7 +112,7 @@ bool isPlayerOP(const string& username){
 	return false;
 }
 
-bool isPlayerBanned(const string& username){
+inline bool isPlayerBanned(const string& username){
 	ifstream file("blacklist.txt");
 	if(!file) return false;
 	string line;

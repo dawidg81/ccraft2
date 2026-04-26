@@ -1,8 +1,22 @@
+#pragma once
 #include <mutex>
+#include <queue>
 #include <map>
 #include <vector>
+#include <string>
+#ifdef _WIN32
+  #include <winsock2.h>
+#else
+  #include <sys/socket.h>
+  typedef int SOCKET;
+#endif
+#include "logger_instance.hpp"
+#include "player.hpp"
+#include "Socket.hpp"
 
-#pragma once
+using namespace std;
+
+class Level;
 
 class Packet {
 public:
@@ -54,6 +68,7 @@ public:
 		}
 	}
 
+	/*
 	void sendLevel(SOCKET socket, Level& level){
 		// PREPARE LEVEL DATA
 		int x = level.sizeX, y = level.sizeY, z = level.sizeZ;
@@ -127,7 +142,8 @@ public:
 		finalPacket[3] = (sy >> 8) & 0xFF; finalPacket[4] = sy & 0xFF;
 		finalPacket[5] = (sz >> 8) & 0xFF; finalPacket[6] = sz & 0xFF;
 		send(socket, (char*)finalPacket, sizeof(finalPacket), 0);
-	}
+	}*/
+	void sendLevel(SOCKET socket, Level& level);
 
 	void sendSpawnPlayer(Player* p, Player* target){
 		char buf[74] = {};
@@ -225,4 +241,4 @@ public:
 	}
 };
 
-Packet pack;
+extern Packet pack;

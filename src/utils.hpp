@@ -1,4 +1,7 @@
 #pragma once
+#include <string>
+
+using namespace std;
 
 auto writeMCString = [](char* buf, const string& str){
 	memset(buf, ' ', 64);
