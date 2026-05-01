@@ -44,8 +44,8 @@ LevelRegistry levelRegistry;
 Socket serverSocket;
 CommandHandler cmdHandler;
 
-/*std::mutex playersMutex;
-std::map<int, Player> players;*/
+std::mutex playersMutex;
+std::map<int, Player> players;
 
 void serverShutdown(int sig){
 	logger.info("Shutting down...");
