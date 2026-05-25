@@ -43,6 +43,11 @@ void initCommands(){
 			reason += ctx.args[i];
 		}
 
+		if (target == ctx.sender->username) {
+			pack.sendMessage(ctx.sender, ctx.sender, "&eYou can't kick yourself");
+			return;
+		}
+
 		lock_guard<mutex> lock(playersMutex);
 		for(auto& pair : players){
 			if(pair.second->username == target){
@@ -99,13 +104,25 @@ void initCommands(){
 			pack.sendMessage(ctx.sender, ctx.sender, "&eUsage: /tp [player]");
 			return;
 		}
+
 		string targetName = ctx.args[1];
+
+		if(targetName == ctx.sender->username){
+			pack.sendMessage(ctx.sender, ctx.sender, "&eYou can't teleport to yourself");
+			return;
+		}
+
 		lock_guard<mutex> lock(playersMutex);
 		for(auto& pair : players){
 			if(pair.second->username == targetName){
 				Player* target = pair.second;
+
+				if(ctx.sender->currentLevel != target->currentLevel){
+					switchWorld(ctx.sender, target->currentLevel);
+				}
+
 				pack.sendTeleport(ctx.sender, target->x, target->y, target->z, target->yaw, target->pitch);
-				pack.sendMessage(ctx.sender, ctx.sender, "&eTeleported to " + targetName);
+				// pack.sendMessage(ctx.sender, ctx.sender, "&eTeleported to " + targetName);
 				return;
 			}
 		}
