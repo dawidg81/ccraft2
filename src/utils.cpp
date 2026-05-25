@@ -5,8 +5,10 @@
 #include "Socket.hpp"
 #include "registry.hpp"
 
-Logger logger;
-Socket serverSocket;
+#include "globals.h"
+
+// Logger logger;
+// Socket serverSocket;
 
 void writeMCString(char* buf, const std::string& str){
 	memset(buf, ' ', 64);

@@ -39,17 +39,19 @@
 #include "commands.hpp"
 #include "registry.hpp"
 
+#include "globals.h"
+
 using namespace std;
 
-LevelRegistry levelRegistry;
-Socket serverSocket;
-CommandHandler cmdHandler;
+// LevelRegistry levelRegistry;
+// Socket serverSocket;
+// CommandHandler cmdHandler;
 Packet pack;
 
 std::mutex playersMutex;
 std::map<uint8_t, Player*> players;
 
-void serverShutdown(int sig){
+/* void serverShutdown(int sig){
 	logger.info("Shutting down...");
 	{
 		lock_guard<mutex> lock(playersMutex);
@@ -62,7 +64,7 @@ void serverShutdown(int sig){
 	logger.info("Goodbye!");
 	serverSocket.sockClose();
 	exit(0);
-}
+}*/
 /*
 void switchWorld(Player* player, const string& targetName){
 	Level* targetLevel = levelRegistry.getOrLoad(targetName);

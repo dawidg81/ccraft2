@@ -10,7 +10,9 @@
 #include "logger_instance.hpp"
 #include "registry.hpp"
 
-LevelRegistry levelRegistry;
+#include "globals.h"
+
+// LevelRegistry levelRegistry;
 
 vector<string> listLevelFiles() {
 	vector<string> result;

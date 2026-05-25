@@ -10,10 +10,12 @@
 #include "player.hpp"
 #include "packet.hpp"
 
+#include "globals.h"
+
 using namespace std;
 
-CommandHandler cmdHandler;
-LevelRegistry levelRegistry;
+/* CommandHandler cmdHandler;
+LevelRegistry levelRegistry; */
 
 void initCommands(){
 	//we structure the command in order: system name, usage string, short

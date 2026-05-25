@@ -1,7 +1,8 @@
 #pragma once
+#include <string>
 
-const string VERSION = "0.12.1";
+const std::string VERSION = "0.12.1";
 
-string confServerName = "ccraft Testing";
+/* string confServerName = "ccraft Testing";
 string confServerMotd = "Welcome!";
-
+*/
