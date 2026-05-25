@@ -1,7 +1,15 @@
 CompileFlags:
   Add: [
     "-std=c++14",
-    "-lpthread",
+    "-pthread",
     "--target=i686-w64-windows-gnu",
-    "-D_M_IX86"
+    "-D_M_IX86",
+    "-D_WIN32_WINNT=0x0601"
   ]
+  Remove: ["-m32"]
+  CompilationDatabase: ""
+
+PathExclude: ["**/MinGW/**"]
+
+Index:
+  Background: Skip

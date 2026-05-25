@@ -1,7 +1,16 @@
 #include <map>
 #include <mutex>
+#include <functional>
+#include <string>
+#include <cstring>
+#include <sstream>
+#include <algorithm>
+#include <fstream>
 #include "player.hpp"
 #include "packet.hpp"
+#include "conf.hpp"
+#include "registry.hpp"
+#include "level.hpp"
 #pragma once
 
 struct commandContext {

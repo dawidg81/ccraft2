@@ -36,6 +36,7 @@
 #include "player.hpp"
 #include "packet.hpp"
 #include "command.hpp"
+#include "commands.hpp"
 #include "registry.hpp"
 
 using namespace std;
@@ -62,7 +63,7 @@ void serverShutdown(int sig){
 	serverSocket.sockClose();
 	exit(0);
 }
-
+/*
 void switchWorld(Player* player, const string& targetName){
 	Level* targetLevel = levelRegistry.getOrLoad(targetName);
 	if(!targetLevel){
@@ -111,8 +112,8 @@ void switchWorld(Player* player, const string& targetName){
 	}
 
 	levelRegistry.unloadIfEmpty(oldLevel);
-}
-
+}*/
+/*
 void initCommands(){
 	//we structure the command in order: system name, usage string, short
 	//description, long description
@@ -538,8 +539,8 @@ cmdHandler.registerCommand(
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/revert <level> <n> - revert level to backup (op)");
 		pack.sendMessage(ctx.sender, ctx.sender, "&e/help - shows this help");
 	});*/
-	cmdHandler.registerHelp();
-}
+	/*cmdHandler.registerHelp();
+}*/
 
 bool recvExact(SOCKET socket, char* buf, int len){
 	int total = 0;

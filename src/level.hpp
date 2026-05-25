@@ -10,6 +10,8 @@
 #include "logger_instance.hpp"
 #include "player.hpp"
 #include "packet.hpp"
+// #include "registry.hpp"
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -518,53 +520,4 @@ public:
 // util
 vector<string> listLevelFiles();
 
-/*
-void switchWorld(Player* player, const string& targetName){
-	Level* targetLevel = levelRegistry.getOrLoad(targetName);
-	if(!targetLevel){
-		pack.sendMessage(player, player, "&cLevel '" + targetName + "' not found!");
-		return;
-	}
-
-	string oldLevel = player->currentLevel;
-
-	// despawn player for others on old level
-	{
-		lock_guard<mutex> lock(playersMutex);
-		for(auto& pair : players){
-			Player* other = pair.second;
-			if(other->id == player->id) continue;
-			if(other->currentLevel == oldLevel){
-				pack.sendDespawnPlayer(player, other);
-				pack.sendDespawnPlayer(other, player);
-			}
-		}
-	}
-
-	player->currentLevel = targetName;
-
-	pack.sendLevel(player->socket, *targetLevel);
-
-	short spawnX = (targetLevel->sizeX / 2) * 32;
-	short spawnY = (targetLevel->sizeY / 2) * 32 + 51;
-	short spawnZ = (targetLevel->sizeZ / 2) * 32;
-	player->x = spawnX;
-	player->y = spawnY;
-	player->z = spawnZ;
-	pack.sendTeleport(player, spawnX, spawnY, spawnZ, 0, 0);
-
-	// others on new level for new player, new player for them
-	{
-		lock_guard<mutex> lock(playersMutex);
-		for(auto& pair : players){
-			Player* other = pair.second;
-			if(other->id == player->id) continue;
-			if(other->currentLevel == targetName){
-				pack.sendSpawnPlayer(other, player);
-				pack.sendSpawnPlayer(player, other);
-			}
-		}
-	}
-
-	levelRegistry.unloadIfEmpty(oldLevel);
-}*/
+void switchWorld(Player* player, const string& targetName);
