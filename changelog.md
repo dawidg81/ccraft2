@@ -1,3 +1,7 @@
+# 0.12.2-preport
+
+* Player now can't teleport to themselves and kick themselves. Attempting to make cross-level teleportation.
+
 # 0.12.1
 
 * Fixed new world generation
