@@ -63,25 +63,25 @@ void handlePlayer(SOCKET clientSocket){
 	if(player == nullptr) return;
 
 	if(player->verKey != md5(serverSalt + player->username)){
-			char buf[65] = {};
-			buf[0] = 0x0e;
-			writeMCString(buf + 1, "Login failed!");
-			send(clientSocket, buf, sizeof(buf), 0);
-			logger.err(player->username + " failed authentication. Expected " + md5(serverSalt + player->username) + " but got " + player->verKey);
-			closesocket(clientSocket);
-			delete player;
-			return;
+		char buf[65] = {};
+		buf[0] = 0x0e;
+		writeMCString(buf + 1, "Login failed!");
+		send(clientSocket, buf, sizeof(buf), 0);
+		logger.err(player->username + " failed authentication. Expected " + md5(serverSalt + player->username) + " but got " + player->verKey);
+		closesocket(clientSocket);
+		delete player;
+		return;
 	}
 
 	if(player->isBanned){
 		char buf[65] = {};
-			buf[0] = 0x0e;
-			writeMCString(buf + 1, "Player '" + player->username + "' is blacklisted");
-			send(clientSocket, buf, sizeof(buf), 0);
-			logger.err(player->username + " tried to join but is blacklisted");
-			closesocket(clientSocket);
-			delete player;
-			return;
+		buf[0] = 0x0e;
+		writeMCString(buf + 1, "Player '" + player->username + "' is blacklisted");
+		send(clientSocket, buf, sizeof(buf), 0);
+		logger.err(player->username + " tried to join but is blacklisted");
+		closesocket(clientSocket);
+		delete player;
+		return;
 	}
 
 	{
@@ -111,45 +111,45 @@ void handlePlayer(SOCKET clientSocket){
 	}
 
 	thread([player, clientSocket, stopSender](){
-		char buf[512];
-		while(!stopSender->load()){
+			char buf[512];
+			while(!stopSender->load()){
 			int n = recv(clientSocket, buf, sizeof(buf), 0);
 			if(n <= 0){
-				player->disconnected = true;
-				break;
+			player->disconnected = true;
+			break;
 			}
 			for(int i=0; i<n; i++) player->pushByte((uint8_t)buf[i]);
-		}
-	}).detach();
+			}
+			}).detach();
 
 	/*
-	thread senderThread([player](){
-		while(true){
-			this_thread::sleep_for(chrono::milliseconds(10));
-			player->flushQueue();
-			lock_guard<mutex> lock(playersMutex);
-			if(players.find(player->id) == players.end()) break;
-		}
-	});
-	senderThread.detach();
-	*/
+	   thread senderThread([player](){
+	   while(true){
+	   this_thread::sleep_for(chrono::milliseconds(10));
+	   player->flushQueue();
+	   lock_guard<mutex> lock(playersMutex);
+	   if(players.find(player->id) == players.end()) break;
+	   }
+	   });
+	   senderThread.detach();
+	   */
 
 	thread([player, stopSender](){
-		while(!stopSender->load()){
+			while(!stopSender->load()){
 			this_thread::sleep_for(chrono::milliseconds(10));
 			player->flushQueue();
-		}
-		player->flushQueue();
-	}).detach();
+			}
+			player->flushQueue();
+			}).detach();
 
 	pack.sendServerId(clientSocket, name, motd, utype);
 	Level* startLevel = levelRegistry.getOrLoad(player->currentLevel);
 	pack.sendLevel(clientSocket, *startLevel);
 
 	{
-	lock_guard<mutex> lock(playersMutex);
-	for(auto& pair : players)
-		pack.sendMessage(player, pair.second, "&e" + player->username + " joined the game");
+		lock_guard<mutex> lock(playersMutex);
+		for(auto& pair : players)
+			pack.sendMessage(player, pair.second, "&e" + player->username + " joined the game");
 	}
 
 	player->x = (startLevel->sizeX / 2) * 32;
@@ -320,31 +320,31 @@ void heartbeat(){
 			"Connection: close\r\n"
 			"\r\n";
 
-struct hostent* he = gethostbyname(host.c_str());
-if (!he) {
-	logger.err("Heartbeat: DNS resolution failed");
-	this_thread::sleep_for(chrono::minutes(1));
-	continue;
-}
+		struct hostent* he = gethostbyname(host.c_str());
+		if (!he) {
+			logger.err("Heartbeat: DNS resolution failed");
+			this_thread::sleep_for(chrono::minutes(1));
+			continue;
+		}
 
-int s = ::socket(AF_INET, SOCK_STREAM, 0);
-if (s < 0) {
-	logger.err("Heartbeat: socket creation failed");
-	this_thread::sleep_for(chrono::minutes(1));
-	continue;
-}
+		int s = ::socket(AF_INET, SOCK_STREAM, 0);
+		if (s < 0) {
+			logger.err("Heartbeat: socket creation failed");
+			this_thread::sleep_for(chrono::minutes(1));
+			continue;
+		}
 
-struct sockaddr_in addr = {};
-addr.sin_family = AF_INET;
-addr.sin_port   = htons(port);
-addr.sin_addr   = *(struct in_addr*)he->h_addr;
+		struct sockaddr_in addr = {};
+		addr.sin_family = AF_INET;
+		addr.sin_port   = htons(port);
+		addr.sin_addr   = *(struct in_addr*)he->h_addr;
 
-if (::connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-	logger.err("Heartbeat: connect failed");
-	closesocket(s);
-	this_thread::sleep_for(chrono::minutes(1));
-	continue;
-}
+		if (::connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+			logger.err("Heartbeat: connect failed");
+			closesocket(s);
+			this_thread::sleep_for(chrono::minutes(1));
+			continue;
+		}
 
 		send(s, request.c_str(), (int)request.size(), 0);
 
