@@ -1,3 +1,7 @@
+# 0.12.3-config
+
+* Player now directly receives server name and MOTD from configuration file.
+
 # 0.12.3-inconfig
 
 * Added configuration file support.

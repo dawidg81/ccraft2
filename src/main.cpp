@@ -122,8 +122,8 @@ void handlePlayer(SOCKET clientSocket){
 		}
 	}
 
-	string name = "default";
-	string motd = "Welcome";
+	string name = gConfig.serverName;
+	string motd = gConfig.serverMotd;
 	char utype = player->isOP ? 0x64 : 0x00;
 	auto stopSender = make_shared<atomic<bool>>(false);
 
