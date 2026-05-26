@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -68,17 +69,24 @@ bool loadConfig(const std::string& path) {
     if (!exists) {
         std::ofstream out(path);
         if (!out.is_open()) {
-            std::cerr << "[conf] Warning: could not create default " << path << "\n";
+            std::cerr << "[conf] Warning: could not create default " << path
+                      << " (errno " << errno << ": " << strerror(errno) << ")\n";
         } else {
             out << DEFAULT_TOML;
             out.flush();
             if (out.fail()) {
-                std::cerr << "[conf] Warning: failed to write default " << path << "\n";
+                std::cerr << "[conf] Warning: failed to write default " << path
+                        << " (errno " << errno << ": " << strerror(errno) << ")\n";
             } else {
                 std::cout << "[conf] Created default " << path << "\n";
             }
         }
         return true;
+    } else {
+        std::cout << "[conf] Created default " << path << "\n";
+        std::ifstream verify(path);
+        if (!verify.is_open())
+            std::cerr << "[conf] Warning: file created but cannot be re-read!\n";
     }
 
     std::ifstream f(path);
