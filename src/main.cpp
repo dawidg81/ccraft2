@@ -38,6 +38,7 @@
 #include "command.hpp"
 #include "commands.hpp"
 #include "registry.hpp"
+#include "conf.hpp"
 
 #include "globals.h"
 
@@ -277,7 +278,7 @@ disconnect:
 
 void saveLoop(){
 	while(true){
-		this_thread::sleep_for(chrono::minutes(5));
+		this_thread::sleep_for(chrono::minutes(gConfig.saveIntervalMinutes));
 		levelRegistry.saveAll();
 
 		lock_guard<mutex> lock(levelRegistry.registryMutex);
@@ -293,9 +294,9 @@ void saveLoop(){
 }
 
 void heartbeat(){
-	const string host = "www.classicube.net";
-	const string path = "/server/heartbeat/";
-	const int port = 80;
+	const string host = gConfig.heartbeatHost;
+	const string path = gConfig.heartbeatPath;
+	const int port = gConfig.heartbeatPort;
 
 	while(true){
 		size_t userCount;
@@ -306,12 +307,12 @@ void heartbeat(){
 
 		string serverName = "default";
 		string query =
-			"name=" + serverName +
-			"&port=25565" +
+			"name=" + gConfig.serverName +
+			"&port=" + to_string(gConfig.port) +
 			"&users=" + to_string(userCount) +
-			"&max=256" +
+			"&max=" + to_string(gConfig.maxPlayers) +
 			"&salt=" + serverSalt +
-			"&public=true" +
+			"&public=" + (gConfig.heartbeatPublic ? "true" : "false") +
 			"&software=ccraft2%20v" + VERSION;
 
 		string request =
@@ -365,7 +366,7 @@ void heartbeat(){
 			else
 				logger.info("Heartbeat OK: " + body);
 		}
-		this_thread::sleep_for(chrono::minutes(1));
+		this_thread::sleep_for(chrono::minutes(gConfig.heartbeatIntervalMinutes));
 	}
 }
 

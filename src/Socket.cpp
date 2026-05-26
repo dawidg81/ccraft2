@@ -1,4 +1,5 @@
 #include "Socket.hpp"
+#include "conf.hpp"
 #include <cstring>
 
 sockaddr_in service;
@@ -27,8 +28,8 @@ int Socket::sockInit()
 
     memset(&service, 0, sizeof(service));
     service.sin_family = AF_INET;
-    service.sin_addr.s_addr = inet_addr(NET_SOCK_ADDR);
-    service.sin_port = htons(NET_SOCK_PORT);
+    service.sin_addr.s_addr = inet_addr(gConfig.bindAddress);
+    service.sin_port = htons(gConfig.port);
 
     int opt = 1;
     setsockopt(mainSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
@@ -61,7 +62,7 @@ int Socket::sockListen()
         closesocket(mainSocket);
         return 1;
     }
-    log.info("Listening on " + std::string(NET_SOCK_ADDR) + ":" + std::to_string(NET_SOCK_PORT));
+    log.info("Listening on " + std::string(gConfig.bindAddress) + ":" + std::to_string(gConfig.port));
     return 0;
 }
 

@@ -13,9 +13,10 @@
   #define closesocket(s) close(s)
 #endif
 #include "Logger.hpp"
+#include "conf.hpp"
 
-#define NET_SOCK_ADDR "0.0.0.0"
-#define NET_SOCK_PORT 25565
+// #define NET_SOCK_ADDR "0.0.0.0"
+// #define NET_SOCK_PORT 25565
 
 class Socket
 {
