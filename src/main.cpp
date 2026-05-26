@@ -373,13 +373,13 @@ void heartbeat(){
         		body.clear();
 
     		if (body.empty())
-        		logger.warn("Heartbeat: empty body. Full response:\n" + response);
+        		logger.info("Heartbeat: empty body. Full response:\n" + response);
     		else if (body.find("errors") != string::npos)
         		logger.err("Heartbeat error: " + body);
     		else
         		logger.info("Heartbeat OK: " + body);
 		} else {
-    		logger.warn("Heartbeat: no header separator found. Raw response:\n" + response);
+    		logger.info("Heartbeat: no header separator found. Raw response:\n" + response);
 		}
 
 		this_thread::sleep_for(chrono::minutes(gConfig.heartbeatIntervalMinutes));
