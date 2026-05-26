@@ -59,19 +59,26 @@ interval_minutes = 5
 )";
 
 bool loadConfig(const std::string& path) {
+    bool exists = false;
     {
         std::ifstream probe(path);
-        if (!probe.good()) {
-            std::ofstream out(path);
-            if (!out) {
-                std::cerr << "[conf] Warning: could not create default "
-                          << path << "\n";
+        exists = probe.is_open();
+    }
+
+    if (!exists) {
+        std::ofstream out(path);
+        if (!out.is_open()) {
+            std::cerr << "[conf] Warning: could not create default " << path << "\n";
+        } else {
+            out << DEFAULT_TOML;
+            out.flush();
+            if (out.fail()) {
+                std::cerr << "[conf] Warning: failed to write default " << path << "\n";
             } else {
-                out << DEFAULT_TOML;
                 std::cout << "[conf] Created default " << path << "\n";
             }
-            return true;
         }
+        return true;
     }
 
     std::ifstream f(path);
