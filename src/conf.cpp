@@ -60,33 +60,23 @@ interval_minutes = 5
 )";
 
 bool loadConfig(const std::string& path) {
-    bool exists = false;
     {
         std::ifstream probe(path);
-        exists = probe.is_open();
-    }
-
-    if (!exists) {
-        std::ofstream out(path);
-        if (!out.is_open()) {
-            std::cerr << "[conf] Warning: could not create default " << path
-                      << " (errno " << errno << ": " << strerror(errno) << ")\n";
-        } else {
-            out << DEFAULT_TOML;
-            out.flush();
-            if (out.fail()) {
-                std::cerr << "[conf] Warning: failed to write default " << path
-                        << " (errno " << errno << ": " << strerror(errno) << ")\n";
+        if (!probe.is_open()) {
+            std::ofstream out(path);
+            if (!out.is_open()) {
+                std::cerr << "[conf] Warning: could not create default " << path
+                          << " (errno " << errno << ": " << strerror(errno) << ")\n";
             } else {
-                std::cout << "[conf] Created default " << path << "\n";
+                out << DEFAULT_TOML;
+                out.flush();
+                if (out.fail())
+                    std::cerr << "[conf] Warning: failed to write default " << path << "\n";
+                else
+                    std::cout << "[conf] Created default " << path << "\n";
             }
+            return true;
         }
-        return true;
-    } else {
-        std::cout << "[conf] Created default " << path << "\n";
-        std::ifstream verify(path);
-        if (!verify.is_open())
-            std::cerr << "[conf] Warning: file created but cannot be re-read!\n";
     }
 
     std::ifstream f(path);
