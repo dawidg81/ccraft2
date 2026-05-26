@@ -295,9 +295,9 @@ void saveLoop(){
 
 void heartbeat(){	
 	while(true){
-		const string host = gConfig.heartbeatHost;
+		/* const string host = gConfig.heartbeatHost;
 		const string path = gConfig.heartbeatPath;
-		const int port = gConfig.heartbeatPort;
+		const int port = gConfig.heartbeatPort; */
 
 		size_t userCount;
 		{
@@ -315,13 +315,19 @@ void heartbeat(){
 			"&public=" + (gConfig.heartbeatPublic ? "true" : "false") +
 			"&software=ccraft2%20v" + VERSION;
 
+		/* string request =
+		   "GET " + path + "?" + query + " HTTP/1.0\r\n"
+		   "Host: " + host + "\r\n"
+		   "Connection: close\r\n"
+		   "\r\n"; */
+
 		string request =
-			"GET " + path + "?" + query + " HTTP/1.0\r\n"
-			"Host: " + host + "\r\n"
+			"GET " + gConfig.heartbeatPath + "?" + query + " HTTP/1.0\r\n"
+			"Host: " + gConfig.heartbeatHost + "\r\n"
 			"Connection: close\r\n"
 			"\r\n";
 
-		struct hostent* he = gethostbyname(host.c_str());
+		struct hostent* he = gethostbyname(gConfig.heartbeatHost.c_str());
 		if (!he) {
 			logger.err("Heartbeat: DNS resolution failed");
 			this_thread::sleep_for(chrono::minutes(1));
@@ -337,7 +343,7 @@ void heartbeat(){
 
 		struct sockaddr_in addr = {};
 		addr.sin_family = AF_INET;
-		addr.sin_port   = htons(port);
+		addr.sin_port   = htons(gConfig.heartbeatPort);
 		addr.sin_addr   = *(struct in_addr*)he->h_addr;
 
 		if (::connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
