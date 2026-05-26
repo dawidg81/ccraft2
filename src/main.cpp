@@ -371,6 +371,7 @@ void heartbeat(){
 }
 
 int main(){
+	loadConfig("config.toml");
 #ifndef _WIN32
 	signal(SIGPIPE, SIG_IGN);
 #else
