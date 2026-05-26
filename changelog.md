@@ -1,3 +1,7 @@
+# 0.12.3-inconfig
+
+* Added configuration file support.
+
 # 0.12.3-preconfig
 
 * Defaulted server name and server motd before config implementation.
