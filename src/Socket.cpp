@@ -28,7 +28,7 @@ int Socket::sockInit()
 
     memset(&service, 0, sizeof(service));
     service.sin_family = AF_INET;
-    service.sin_addr.s_addr = inet_addr(gConfig.bindAddress);
+    service.sin_addr.s_addr = inet_addr(gConfig.bindAddress.c_str());
     service.sin_port = htons(gConfig.port);
 
     int opt = 1;
