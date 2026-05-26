@@ -363,27 +363,17 @@ void heartbeat(){
 		}
 		closesocket(s);
 
-		string body = response.substr(pos + 4);
-		auto last = body.find_last_not_of(" \t\r\n");
-		if (last != string::npos)
-    		body.erase(last + 1);
-		else
-    		body.clear();
-
-		if (body.empty())
-    		logger.warn("Heartbeat: empty body. Full response:\n" + response);
-			else if (body.find("errors") != string::npos)
-    		logger.err("Heartbeat error: " + body);
-		else
-    		logger.info("Heartbeat OK: " + body);
-
 		auto pos = response.find("\r\n\r\n");
 		if (pos != string::npos) {
     		string body = response.substr(pos + 4);
-    		// trim trailing whitespace/newlines
-    		body.erase(body.find_last_not_of(" \t\r\n") + 1);
-		    if (body.empty())
-		        logger.warn("Heartbeat: empty body. Full response:\n" + response);
+    		auto last = body.find_last_not_of(" \t\r\n");
+    		if (last != string::npos)
+        		body.erase(last + 1);
+    		else
+        		body.clear();
+
+    		if (body.empty())
+        		logger.warn("Heartbeat: empty body. Full response:\n" + response);
     		else if (body.find("errors") != string::npos)
         		logger.err("Heartbeat error: " + body);
     		else
