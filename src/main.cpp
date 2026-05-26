@@ -293,12 +293,12 @@ void saveLoop(){
 	}
 }
 
-void heartbeat(){
-	const string host = gConfig.heartbeatHost;
-	const string path = gConfig.heartbeatPath;
-	const int port = gConfig.heartbeatPort;
-
+void heartbeat(){	
 	while(true){
+		const string host = gConfig.heartbeatHost;
+		const string path = gConfig.heartbeatPath;
+		const int port = gConfig.heartbeatPort;
+
 		size_t userCount;
 		{
 			lock_guard<mutex> lock(playersMutex);
@@ -410,4 +410,3 @@ int main(){
 	}
 
 	return 0;
-}
