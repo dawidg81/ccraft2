@@ -99,8 +99,8 @@ void handlePlayer(SOCKET clientSocket){
 		}
 	}
 
-	string name = "ccraft Testing";
-	string motd = "Welcome, " + player->username + "!";
+	string name = "default";
+	string motd = "Welcome";
 	char utype = player->isOP ? 0x64 : 0x00;
 	auto stopSender = make_shared<atomic<bool>>(false);
 
@@ -304,7 +304,7 @@ void heartbeat(){
 			userCount = players.size();
 		}
 
-		string serverName = "ccraft%20Testing";
+		string serverName = "default";
 		string query =
 			"name=" + serverName +
 			"&port=25565" +

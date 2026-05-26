@@ -1,3 +1,7 @@
+# 0.12.3-preconfig
+
+* Defaulted server name and server motd before config implementation.
+
 # 0.12.2-preport
 
 * Player now can't teleport to themselves and kick themselves. Attempting to make cross-level teleportation.
