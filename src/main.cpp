@@ -305,7 +305,6 @@ void heartbeat(){
 			userCount = players.size();
 		}
 
-		string serverName = "default";
 		string query =
 			"name=" + gConfig.serverName +
 			"&port=" + to_string(gConfig.port) +
