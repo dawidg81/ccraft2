@@ -1,4 +1,5 @@
 #include <chrono>
+#include <iomanip>
 #define _WIN32_WINNT 0x0601
 #define WIN32_LEAN_AND_MEAN
 
@@ -57,6 +58,27 @@ bool recvExact(SOCKET socket, char* buf, int len){
 		total += n;
 	}
 	return true;
+}
+
+string urlEncode(const string& s) {
+    ostringstream out;
+
+    for (unsigned char c : s) {
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            out << c;
+        } else {
+            out << '%'
+                << uppercase
+                << hex
+                << setw(2)
+                << setfill('0')
+                << (int)c
+                << nouppercase
+                << dec;
+        }
+    }
+
+    return out.str();
 }
 
 void handlePlayer(SOCKET clientSocket){
@@ -306,13 +328,13 @@ void heartbeat(){
 		}
 
 		string query =
-			"name=" + gConfig.serverName +
+			"name=" + urlEncode(gConfig.serverName) +
 			"&port=" + to_string(gConfig.port) +
 			"&users=" + to_string(userCount) +
 			"&max=" + to_string(gConfig.maxPlayers) +
 			"&salt=" + serverSalt +
 			"&public=" + (gConfig.heartbeatPublic ? "true" : "false") +
-			"&software=ccraft2%20v" + VERSION;
+			"&software=" + urlEncode(string("ccraft2 v") + VERSION);
 
 		/* string request =
 		   "GET " + path + "?" + query + " HTTP/1.0\r\n"
