@@ -138,6 +138,31 @@ the executable, then write in your nickname. Each nickname each line. You may
 also want to add `blacklist.txt` to prevent some players from joining to the
 server. These both `.txt` files should be located next to the server executable.
 
+# Configuration
+
+Server comes with a configuration file.
+
+```toml
+[server]
+name    = "Default Server"
+motd    = "Welcome!"
+max_players = 256
+
+[network]
+bind_address = "0.0.0.0"
+port         = 25565
+
+[heartbeat]
+host             = "www.classicube.net"
+path             = "/server/heartbeat/"
+port             = 80
+public           = true
+interval_minutes = 1
+
+[save]
+interval_minutes = 5
+```
+
 # License
 
 ccraft2 is licensed under MIT License. It can be found in
