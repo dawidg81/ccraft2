@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-const std::string VERSION = "0.13.0-prePlayerDB";
+const std::string VERSION = "0.13.1-prePlayerDB";
 
 struct ServerConfig {
 	std::string serverName = "Default Server";

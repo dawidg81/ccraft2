@@ -97,7 +97,7 @@ void handlePlayer(SOCKET clientSocket){
 		return;
 	}
 
-	string clientIp = /* get IP from clientSocket, e.g. getpeername() */;
+	std::string clientIp = getClientIp(clientSocket);
 	PlayerRecord rec = playerDB.loginPlayer(player->username, clientIp);
 
 	if(rec.isBanned){

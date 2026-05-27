@@ -33,3 +33,11 @@ public:
     void sockClose();
     SOCKET sockAccept();
 };
+
+inline std::string getClientIp(SOCKET s) {
+    struct sockaddr_in addr = {};
+    socklen_t len = sizeof(addr);
+    if (getpeername(s, (struct sockaddr*)&addr, &len) != 0)
+        return "unknown";
+    return inet_ntoa(addr.sin_addr);
+}
