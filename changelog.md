@@ -1,3 +1,7 @@
+# 0.15.0
+
+* Added commands conherent to PlayerDB.
+
 # 0.14.0
 
 * Database files will now show in db/ directory.
