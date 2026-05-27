@@ -1,3 +1,7 @@
+# 0.14.0
+
+* Database files will now show in db/ directory.
+
 # 0.13.1-prePlayerDB
 
 * Fix in receiving player's IP.

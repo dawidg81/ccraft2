@@ -18,7 +18,7 @@ struct PlayerRecord {
 
 class PlayerDB {
 public:
-    explicit PlayerDB(const std::string& path = "players.db");
+    explicit PlayerDB(const std::string& path = "db/players.db");
     ~PlayerDB();
 
     PlayerDB(const PlayerDB&)            = delete;
