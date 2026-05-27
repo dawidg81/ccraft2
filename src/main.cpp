@@ -438,6 +438,7 @@ int main(){
 	CreateDirectoryA("maps", nullptr);
 #else
 	mkdir("maps", 0755);
+	mkdir("db", 0755);
 #endif
 	levelRegistry.getOrLoad("main", true);
 
