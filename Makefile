@@ -14,12 +14,16 @@ endif
 
 all: ccraft2
 
-ccraft2: $(OBJ)
-	g++ $(CXXFLAGS) $(OBJ) -o ccraft2.exe $(LIBS)
+ccraft2: $(OBJ) build/sqlite3.o
+	g++ $(CXXFLAGS) $(OBJ) build/sqlite3.o -o ccraft2.exe $(LIBS)
 
 build/%.o: src/%.cpp
 	mkdir -p build
 	g++ $(CXXFLAGS) -c $< -o $@
+
+build/sqlite3.o: src/sqlite3.c
+	mkdir -p build
+	gcc -c src/sqlite3.c -o build/sqlite3.o
 
 clean:
 	rm -rf build ccraft2.exe
