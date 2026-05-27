@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <sstream>
 
+PlayerDB playerDB;
 PlayerDB* playerDB_ptr = nullptr;
 
 PlayerDB& getPlayerDB() {
