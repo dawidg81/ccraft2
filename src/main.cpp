@@ -421,6 +421,13 @@ void heartbeat(){
 }
 
 int main(){
+#ifdef _WIN32
+	CreateDirectoryA("maps", nullptr);
+	CreateDirectoryA("db", nullptr);
+#else
+	mkdir("maps", 0755);
+	mkdir("db", 0755);
+#endif
 	loadConfig("config.toml");
 #ifndef _WIN32
 	signal(SIGPIPE, SIG_IGN);
@@ -434,12 +441,6 @@ int main(){
 	splash.append(VERSION);
 	logger.raw(splash);
 
-#ifdef _WIN32
-	CreateDirectoryA("maps", nullptr);
-#else
-	mkdir("maps", 0755);
-	mkdir("db", 0755);
-#endif
 	levelRegistry.getOrLoad("main", true);
 
 	thread(saveLoop).detach();

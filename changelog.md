@@ -1,3 +1,7 @@
+# 0.15.3
+
+* Fixed checking creation of db/ directory.
+
 # 0.15.2
 
 * Fixed database creation to be in db/ directory.

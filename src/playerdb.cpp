@@ -4,7 +4,15 @@
 #include <algorithm>
 #include <sstream>
 
-PlayerDB playerDB;
+PlayerDB* playerDB_ptr = nullptr;
+
+PlayerDB& getPlayerDB() {
+    if (!playerDB_ptr) {
+        static PlayerDB instance;
+        playerDB_ptr = &instance;
+    }
+    return *playerDB_ptr;
+}
 
 static std::string isoNow() {
     std::time_t t = std::time(nullptr);
