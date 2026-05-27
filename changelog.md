@@ -1,3 +1,7 @@
+# 0.15.1
+
+* Added welcome message.
+
 # 0.15.0
 
 * Added commands conherent to PlayerDB.

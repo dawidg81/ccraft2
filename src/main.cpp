@@ -62,24 +62,24 @@ bool recvExact(SOCKET socket, char* buf, int len){
 }
 
 string urlEncode(const string& s) {
-    ostringstream out;
+	ostringstream out;
 
-    for (unsigned char c : s) {
-        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-            out << c;
-        } else {
-            out << '%'
-                << uppercase
-                << hex
-                << setw(2)
-                << setfill('0')
-                << (int)c
-                << nouppercase
-                << dec;
-        }
-    }
+	for (unsigned char c : s) {
+		if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+			out << c;
+		} else {
+			out << '%'
+				<< uppercase
+				<< hex
+				<< setw(2)
+				<< setfill('0')
+				<< (int)c
+				<< nouppercase
+				<< dec;
+		}
+	}
 
-    return out.str();
+	return out.str();
 }
 
 void handlePlayer(SOCKET clientSocket){
@@ -174,6 +174,12 @@ void handlePlayer(SOCKET clientSocket){
 	pack.sendServerId(clientSocket, name, motd, utype);
 	Level* startLevel = levelRegistry.getOrLoad(player->currentLevel);
 	pack.sendLevel(clientSocket, *startLevel);
+
+	if(rec.firstSeen == rec.lastSeen) {
+		lock_guard<mutex> lock(playersMutex);
+		for(auto& pair : players)
+			pack.sendMessage(player, pair.second, "&eWelcome, " + player->username + "!");
+	}
 
 	{
 		lock_guard<mutex> lock(playersMutex);
@@ -324,8 +330,8 @@ void saveLoop(){
 void heartbeat(){	
 	while(true){
 		/* const string host = gConfig.heartbeatHost;
-		const string path = gConfig.heartbeatPath;
-		const int port = gConfig.heartbeatPort; */
+		   const string path = gConfig.heartbeatPath;
+		   const int port = gConfig.heartbeatPort; */
 
 		size_t userCount;
 		{
@@ -393,21 +399,21 @@ void heartbeat(){
 
 		auto pos = response.find("\r\n\r\n");
 		if (pos != string::npos) {
-    		string body = response.substr(pos + 4);
-    		auto last = body.find_last_not_of(" \t\r\n");
-    		if (last != string::npos)
-        		body.erase(last + 1);
-    		else
-        		body.clear();
+			string body = response.substr(pos + 4);
+			auto last = body.find_last_not_of(" \t\r\n");
+			if (last != string::npos)
+				body.erase(last + 1);
+			else
+				body.clear();
 
-    		if (body.empty())
-        		logger.info("Heartbeat: empty body. Full response:\n" + response);
-    		else if (body.find("errors") != string::npos)
-        		logger.err("Heartbeat error: " + body);
-    		else
-        		logger.info("Heartbeat OK: " + body);
+			if (body.empty())
+				logger.info("Heartbeat: empty body. Full response:\n" + response);
+			else if (body.find("errors") != string::npos)
+				logger.err("Heartbeat error: " + body);
+			else
+				logger.info("Heartbeat OK: " + body);
 		} else {
-    		logger.info("Heartbeat: no header separator found. Raw response:\n" + response);
+			logger.info("Heartbeat: no header separator found. Raw response:\n" + response);
 		}
 
 		this_thread::sleep_for(chrono::minutes(gConfig.heartbeatIntervalMinutes));
