@@ -48,7 +48,7 @@ using namespace std;
 
 Packet pack;
 
-std::mutex playersMutex;
+std::recursive_mutex playersMutex;
 std::map<uint8_t, Player*> players;
 
 bool recvExact(SOCKET socket, char* buf, int len){
@@ -112,7 +112,7 @@ void handlePlayer(SOCKET clientSocket){
 	}
 
 	{
-		lock_guard<mutex> lock(playersMutex);
+		lock_guard<recursive_mutex> lock(playersMutex);
 		for(auto& pair : players){
 			if(pair.second->username == player->username){
 				char buf[65] = {};
@@ -134,7 +134,7 @@ void handlePlayer(SOCKET clientSocket){
 	player->isOP = rec.isOp;
 
 	{
-		lock_guard<mutex> lock(playersMutex);
+		lock_guard<recursive_mutex> lock(playersMutex);
 		player->id = assignId();
 		players[player->id] = player;
 	}
@@ -156,7 +156,7 @@ void handlePlayer(SOCKET clientSocket){
 	   while(true){
 	   this_thread::sleep_for(chrono::milliseconds(10));
 	   player->flushQueue();
-	   lock_guard<mutex> lock(playersMutex);
+	   lock_guard<recursive_mutex> lock(playersMutex);
 	   if(players.find(player->id) == players.end()) break;
 	   }
 	   });
@@ -176,13 +176,13 @@ void handlePlayer(SOCKET clientSocket){
 	pack.sendLevel(clientSocket, *startLevel);
 
 	if(rec.firstSeen == rec.lastSeen) {
-		lock_guard<mutex> lock(playersMutex);
+		lock_guard<recursive_mutex> lock(playersMutex);
 		for(auto& pair : players)
 			pack.sendMessage(player, pair.second, "&eWelcome, " + player->username + "!");
 	}
 
 	{
-		lock_guard<mutex> lock(playersMutex);
+		lock_guard<recursive_mutex> lock(playersMutex);
 		for(auto& pair : players)
 			pack.sendMessage(player, pair.second, "&e" + player->username + " joined the game");
 	}
@@ -192,7 +192,7 @@ void handlePlayer(SOCKET clientSocket){
 	player->z = (startLevel->sizeZ / 2) * 32;
 
 	{
-		lock_guard<mutex> lock(playersMutex);
+		lock_guard<recursive_mutex> lock(playersMutex);
 		for(auto& pair : players){
 			Player* other = pair.second;
 			if(other->id == player->id) continue;
@@ -244,7 +244,7 @@ void handlePlayer(SOCKET clientSocket){
 					  Level* lvl = levelRegistry.getOrLoad(player->currentLevel);
 					  if(lvl) lvl->setBlock(bx, by, bz, newBlock);
 
-					  lock_guard<mutex> lock(playersMutex);
+					  lock_guard<recursive_mutex> lock(playersMutex);
 					  for(auto& pair : players)
 						  if(pair.second->currentLevel == player-> currentLevel)
 							  pack.sendSetBlock(pair.second, bx, by, bz, newBlock);
@@ -261,7 +261,7 @@ void handlePlayer(SOCKET clientSocket){
 					  player->yaw = (uint8_t)buf[7];
 					  player->pitch = (uint8_t)buf[8];
 
-					  lock_guard<mutex> lock(playersMutex);
+					  lock_guard<recursive_mutex> lock(playersMutex);
 					  for(auto& pair: players){
 						  if(pair.second->id != player->id)
 							  pack.sendPositionUpdate(player, pair.second);
@@ -279,7 +279,7 @@ void handlePlayer(SOCKET clientSocket){
 
 					  logger.info("<" + player->username + "> " + msg);
 
-					  lock_guard<mutex> lock(playersMutex);
+					  lock_guard<recursive_mutex> lock(playersMutex);
 					  for(auto& pair : players)
 						  pack.sendMessage(player, pair.second, player->username + ": " + msg);
 					  break;
@@ -293,7 +293,7 @@ void handlePlayer(SOCKET clientSocket){
 disconnect:
 	string leftLevel = player->currentLevel;
 	{
-		lock_guard<mutex> lock(playersMutex);
+		lock_guard<recursive_mutex> lock(playersMutex);
 		players.erase(player->id);
 		for(auto& pair : players){
 			if(pair.second->currentLevel == leftLevel)
@@ -335,7 +335,7 @@ void heartbeat(){
 
 		size_t userCount;
 		{
-			lock_guard<mutex> lock(playersMutex);
+			lock_guard<recursive_mutex> lock(playersMutex);
 			userCount = players.size();
 		}
 

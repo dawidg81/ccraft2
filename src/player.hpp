@@ -91,7 +91,7 @@ public:
 	}
 };
 
-extern mutex playersMutex;
+extern recursive_mutex playersMutex;
 extern map<uint8_t, Player*> players;
 
 inline uint8_t assignId(){

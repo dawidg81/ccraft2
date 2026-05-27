@@ -46,7 +46,7 @@ void initCommands(){
 				return;
 			}
 
-			lock_guard<mutex> lock(playersMutex);
+			lock_guard<recursive_mutex> lock(playersMutex);
 			for(auto& pair : players){
 				if(pair.second->username == target){
 					if(reason.length() > 0){
@@ -110,7 +110,7 @@ void initCommands(){
 			return;
 			}
 
-			lock_guard<mutex> lock(playersMutex);
+			lock_guard<recursive_mutex> lock(playersMutex);
 			for(auto& pair : players){
 			if(pair.second->username == targetName){
 				Player* target = pair.second;
@@ -148,7 +148,7 @@ void initCommands(){
 			if(playerDB.setOp(username, true)){
 			pack.sendMessage(ctx.sender, ctx.sender, "&e" + username + " is now an operator");
 
-			lock_guard<mutex> lock(playersMutex);
+			lock_guard<recursive_mutex> lock(playersMutex);
 			for(auto& pair : players){
 				if(pair.second->username == username){
 					pair.second->isOP = true;
@@ -182,7 +182,7 @@ void initCommands(){
 			if(playerDB.setOp(username, false)){
 			pack.sendMessage(ctx.sender, ctx.sender, "&e" + username + " is no longer an operator");
 
-			lock_guard<mutex> lock(playersMutex);
+			lock_guard<recursive_mutex> lock(playersMutex);
 			for(auto& pair : players){
 				if(pair.second->username == username){
 					pair.second->isOP = false;
@@ -221,7 +221,7 @@ void initCommands(){
 			if(playerDB.setBanned(username, true, reason)){
 				pack.sendMessage(ctx.sender, ctx.sender, "&e" + username + " has been banned");
 
-				lock_guard<mutex> lock(playersMutex);
+				lock_guard<recursive_mutex> lock(playersMutex);
 				for(auto& pair : players){
 					if(pair.second->username == username){
 						string kickMsg = "You have been banned";
@@ -302,7 +302,7 @@ void initCommands(){
 			switchWorld(ctx.sender, targetName);
 
 			{
-			lock_guard<mutex> lock(playersMutex);
+			lock_guard<recursive_mutex> lock(playersMutex);
 			for (auto& pair : players) {
 			pack.sendMessage(pair.second, pair.second, "&e" + ctx.sender->username + " went to &b" + targetName);
 			}
@@ -322,7 +322,7 @@ void initCommands(){
 			switchWorld(ctx.sender, "main");
 
 			{
-			lock_guard<mutex> lock(playersMutex);
+			lock_guard<recursive_mutex> lock(playersMutex);
 			for (auto& pair : players) {
 			pack.sendMessage(pair.second, pair.second, "&e" + ctx.sender->username + " went to &bmain level");
 			}
@@ -383,7 +383,7 @@ void initCommands(){
 
 			// Kick all players on that level to main first
 			{
-				lock_guard<mutex> lock(playersMutex);
+				lock_guard<recursive_mutex> lock(playersMutex);
 				for (auto& pair : players) {
 					if (pair.second->currentLevel == name) {
 						pack.sendMessage(pair.second, pair.second, "&cThe level you were on was deleted. Sending you to main.");
@@ -393,7 +393,7 @@ void initCommands(){
 			// switchWorld must be called without playersMutex held
 			vector<Player*> toMove;
 			{
-				lock_guard<mutex> lock(playersMutex);
+				lock_guard<recursive_mutex> lock(playersMutex);
 				for (auto& pair : players)
 					if (pair.second->currentLevel == name)
 						toMove.push_back(pair.second);
@@ -551,7 +551,7 @@ void initCommands(){
 
 			// resend level to all players on it
 			{
-				lock_guard<mutex> lock(playersMutex);
+				lock_guard<recursive_mutex> lock(playersMutex);
 				for(auto& pair : players) {
 					if(pair.second->currentLevel == levelName) {
 						pack.sendLevel(pair.second->socket, *lvl);

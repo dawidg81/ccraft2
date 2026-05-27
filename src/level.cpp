@@ -88,7 +88,7 @@ void switchWorld(Player* player, const string& targetName){
 
 	// despawn player for others on old level
 	{
-		lock_guard<mutex> lock(playersMutex);
+		lock_guard<recursive_mutex> lock(playersMutex);
 		for(auto& pair : players){
 			Player* other = pair.second;
 			if(other->id == player->id) continue;
@@ -113,7 +113,7 @@ void switchWorld(Player* player, const string& targetName){
 
 	// others on new level for new player, new player for them
 	{
-		lock_guard<mutex> lock(playersMutex);
+		lock_guard<recursive_mutex> lock(playersMutex);
 		for(auto& pair : players){
 			Player* other = pair.second;
 			if(other->id == player->id) continue;

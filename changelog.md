@@ -1,3 +1,7 @@
+# 0.16.0
+
+* Fixed server freeze on teleporting to player from other world.
+
 # 0.15.3
 
 * Fixed checking creation of db/ directory.

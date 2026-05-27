@@ -18,7 +18,7 @@ void writeMCString(char* buf, const std::string& str){
 void serverShutdown(int sig){
 	logger.info("Shutting down...");
 	{
-		lock_guard<mutex> lock(playersMutex);
+		lock_guard<recursive_mutex> lock(playersMutex);
 		for(auto& pair : players){
 			pack.sendDisconnect(pair.second, "Game stopped");
 			pair.second->flushQueue();
