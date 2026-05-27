@@ -40,6 +40,7 @@
 #include "commands.hpp"
 #include "registry.hpp"
 #include "conf.hpp"
+#include "playerdb.hpp"
 
 #include "globals.h"
 
@@ -96,7 +97,10 @@ void handlePlayer(SOCKET clientSocket){
 		return;
 	}
 
-	if(player->isBanned){
+	string clientIp = /* get IP from clientSocket, e.g. getpeername() */;
+	PlayerRecord rec = playerDB.loginPlayer(player->username, clientIp);
+
+	if(rec.isBanned){
 		char buf[65] = {};
 		buf[0] = 0x0e;
 		writeMCString(buf + 1, "Player '" + player->username + "' is blacklisted");
@@ -126,6 +130,8 @@ void handlePlayer(SOCKET clientSocket){
 	string motd = gConfig.serverMotd;
 	char utype = player->isOP ? 0x64 : 0x00;
 	auto stopSender = make_shared<atomic<bool>>(false);
+
+	player->isOP = rec.isOp;
 
 	{
 		lock_guard<mutex> lock(playersMutex);
