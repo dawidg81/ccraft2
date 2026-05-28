@@ -23,6 +23,7 @@ void BlockLog::createSchema() {
 			"CREATE TABLE IF NOT EXISTS block_changes ("
 			"  id INTEGER PRIMARY KEY AUTOINCREMENT,"
 			"  user_id INTEGER NOT NULL,"
+			"  world_id INTEGER NOT NULL,"
 			"  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,"
 			"  block_id INTEGER NOT NULL"
 			");"
@@ -39,12 +40,13 @@ void BlockLog::execOrThrow(const std::string& sql) const {
 	}
 }
 
-void BlockLog::logBlockChange(int64_t userId, uint8_t blockId) {
+void BlockLog::logBlockChange(int64_t userId, int64_t worldId, uint8_t blockId) {
 	if (!db) return;
 
 	std::string sql = 
-		"INSERT INTO block_changes (user_id, block_id) VALUES (" +
+		"INSERT INTO block_changes (user_id, world_id, block_id) VALUES (" +
 		std::to_string(userId) + ", " +
+		std::to_string(worldId) + ", " +
 		std::to_string(blockId) + ");";
 
 	execOrThrow(sql);

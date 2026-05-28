@@ -11,7 +11,8 @@ class BlockLog {
 		BlockLog(const BlockLog&)            = delete;
 		BlockLog& operator=(const BlockLog&) = delete;
 
-		void logBlockChange(int64_t userId, uint8_t blockId);
+		// worldId should be the rowid from worldDB
+		void logBlockChange(int64_t userId, int64_t worldId, uint8_t blockId);
 
 	private:
 		sqlite3* db = nullptr;
