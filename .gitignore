@@ -9,3 +9,4 @@ blacklist.txt
 maps/
 config.toml
 db/
+*.db
