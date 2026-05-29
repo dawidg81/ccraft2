@@ -36,6 +36,8 @@ public:
     bool isOp    (const std::string& username) const;
     bool isBanned(const std::string& username) const;
 
+    bool findPlayerRowid(const std::string& username, int64_t& rowid) const;
+
     std::vector<PlayerRecord> listAll() const;
 
 private:
@@ -45,8 +47,6 @@ private:
     void createSchema();
 
     void loadRelations(PlayerRecord& rec) const;
-
-    bool findPlayerRowid(const std::string& username, int64_t& rowid) const;
 };
 
 extern PlayerDB playerDB;

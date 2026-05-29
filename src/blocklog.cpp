@@ -1,5 +1,6 @@
 #include "blocklog.hpp"
 #include "Logger.hpp"
+#include "logger_instance.hpp"
 
 BlockLog blockLog("db/blocklog.db");
 

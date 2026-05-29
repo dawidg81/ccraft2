@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-const std::string VERSION = "0.16.0";
+const std::string VERSION = "0.17.0";
 
 struct ServerConfig {
 	std::string serverName = "Default Server";

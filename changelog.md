@@ -1,3 +1,7 @@
+# 0.17.0
+
+* Finished implementing world db
+
 # 0.16.0
 
 * Fixed server freeze on teleporting to player from other world.

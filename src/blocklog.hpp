@@ -2,6 +2,7 @@
 #include <string>
 #include <cstdint>
 #include "sqlite3.h"
+#include "logger_instance.hpp"
 
 class BlockLog {
 	public:

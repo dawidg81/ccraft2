@@ -249,14 +249,12 @@ void handlePlayer(SOCKET clientSocket){
 					  Level* lvl = levelRegistry.getOrLoad(player->currentLevel);
 
 					  if(lvl) {
-						lvl->addBlock(bx, by, bz, newBlock);
+						lvl->setBlock(bx, by, bz, newBlock);
 
 						int64_t playerRowid = 0;
         				playerDB.findPlayerRowid(player->username, playerRowid);
         				blockLog.logBlockChange(playerRowid, lvl->worldId, newBlock);
 					  }
-
-					  blockLog.logBlockChange(playerRowid, newBlock);
 
 					  lock_guard<recursive_mutex> lock(playersMutex);
 					  for(auto& pair : players)

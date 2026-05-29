@@ -1,5 +1,6 @@
 #include "worlddb.hpp"
 #include "Logger.hpp"
+#include "logger_instance.hpp"
 #include <ctime>
 #include <iomanip>
 #include <sstream>
