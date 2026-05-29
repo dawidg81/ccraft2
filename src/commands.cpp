@@ -473,7 +473,7 @@ void initCommands(){
 			check.close();
 
 			// load backup into a temporary level and send it to just this player
-			Level tmp(256, 64, 256);
+			Level tmp(256, 64, 256, 0);
 			tmp.load(backupPath);
 			pack.sendLevel(ctx.sender->socket, tmp);
 

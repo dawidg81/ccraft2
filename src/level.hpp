@@ -3,11 +3,20 @@
 #include <fstream>
 #include <cstring>
 #include <atomic>
+#include <mutex>
+#include <map>
 #include "Logger.hpp"
 #include "logger_instance.hpp"
 #include "worlddb.hpp"
 
-void backupLevel(const string& name, const string& path);
+using namespace std;
+
+class Player;
+
+std::vector<std::string> listLevelFiles();
+void backupLevel(const std::string& name, const std::string& path);
+int getLatestBackup(const std::string& name);
+void switchWorld(Player* player, const std::string& targetName);
 
 class Level {
 public:
