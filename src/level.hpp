@@ -10,6 +10,7 @@
 #include "logger_instance.hpp"
 #include "player.hpp"
 #include "packet.hpp"
+#include "worlddb.hpp"
 // #include "registry.hpp"
 
 #ifdef _WIN32
@@ -79,111 +80,63 @@ class Level {
 			blocks.push_back({x, y, z, id});
 		}
 
-		void newFile(){
-			fill(blocks.begin(), blocks.end(), 0x00);
-			int groundY = sizeY / 2;
-			for(int iz = 0; iz < sizeZ; iz++){
-				for(int ix = 0; ix < sizeX; ix++){
-					setBlock(ix, groundY - 2, iz, 3); // dirt
-					setBlock(ix, groundY - 1, iz, 3); // dirt
-					setBlock(ix, groundY,     iz, 2); // grass
-				}
-			}
-			dirty = false;
-			logger.info("Generated new level to a file");
-		}
+	void newFile() {
+        blocks.clear();
+        int groundY = sizeY / 2;
+        for (int iz = 0; iz < sizeZ; iz++) {
+            for (int ix = 0; ix < sizeX; ix++) {
+                addBlock(ix, groundY - 2, iz, 3);  // dirt
+                addBlock(ix, groundY - 1, iz, 3);  // dirt
+                addBlock(ix, groundY, iz, 2);      // grass
+            }
+        }
+        logger.info("Generated new level");
+    }
 
-		void save(const string& filename){
-			ofstream file(filename, ios::binary);
-			if(!file){logger.err("Failed to open level file for writing: " + filename); return;}
+		void save(const std::string& filename) {
+        std::ofstream file(filename, std::ios::binary);
+        if (!file) {
+            logger.err("Failed to open level file for writing: " + filename);
+            return;
+        }
 
-			// Magic bytes
-			file.write("CCRMCLVL", 8);
+        // Write each block as 7 bytes: x(2) + z(2) + y(2) + id(1)
+        for (const auto& block : blocks) {
+            uint8_t buf[7];
+            buf[0] = (block.x >> 8) & 0xFF;
+            buf[1] = block.x & 0xFF;
+            buf[2] = (block.z >> 8) & 0xFF;
+            buf[3] = block.z & 0xFF;
+            buf[4] = (block.y >> 8) & 0xFF;
+            buf[5] = block.y & 0xFF;
+            buf[6] = block.id;
+            file.write((char*)buf, 7);
+        }
 
-			// World mode: finite
-			uint8_t mode = 0x00;
-			file.write((char*)&mode, 1);
+        file.close();
+        logger.info("Level saved to " + filename);
+    }
 
-			// World boundaries (3 shorts, big-endian)
-			uint8_t bounds[6];
-			bounds[0] = (sizeX >> 8) & 0xFF; bounds[1] = sizeX & 0xFF;
-			bounds[2] = (sizeY >> 8) & 0xFF; bounds[3] = sizeY & 0xFF;
-			bounds[4] = (sizeZ >> 8) & 0xFF; bounds[5] = sizeZ & 0xFF;
-			file.write((char*)bounds, 6);
+	void load(const std::string& filename) {
+        std::ifstream file(filename, std::ios::binary);
+        if (!file) {
+            logger.err("Failed to open level file: " + filename);
+            return;
+        }
 
-			// Block array: chunk-order (chunk increments x, then z, then y;
-			// blocks inside chunk increment x, then z, then y)
-			int chunksX = (sizeX + 15) / 16;
-			int chunksY = (sizeY + 15) / 16;
-			int chunksZ = (sizeZ + 15) / 16;
+        blocks.clear();
+        uint8_t buf[7];
+        while (file.read((char*)buf, 7)) {
+            int16_t x = (int16_t)((buf[0] << 8) | buf[1]);
+            int16_t z = (int16_t)((buf[2] << 8) | buf[3]);
+            int16_t y = (int16_t)((buf[4] << 8) | buf[5]);
+            uint8_t id = buf[6];
+            blocks.push_back({x, y, z, id});
+        }
 
-			for(int cy = 0; cy < chunksY; cy++)
-				for(int cz = 0; cz < chunksZ; cz++)
-					for(int cx = 0; cx < chunksX; cx++)
-						for(int ly = 0; ly < 16; ly++)
-							for(int lz = 0; lz < 16; lz++)
-								for(int lx = 0; lx < 16; lx++){
-									int wx = cx*16 + lx;
-									int wy = cy*16 + ly;
-									int wz = cz*16 + lz;
-									uint8_t id = (wx < sizeX && wy < sizeY && wz < sizeZ) ? getBlock(wx, wy, wz) : 0x00;
-									file.write((char*)&id, 1);
-								}
-
-			file.close();
-			logger.info("Level saved to " + filename);
-		}
-
-		void load(const string& filename){
-			ifstream file(filename, ios::binary);
-			if(!file){logger.err("Failed to open level file: " + filename); return;}
-
-			// Magic bytes
-			char magic[8];
-			if(!file.read(magic, 8) || memcmp(magic, "CCRMCLVL", 8) != 0){
-				logger.err("Invalid level file (bad magic): " + filename);
-				return;
-			}
-
-			// World mode
-			uint8_t mode = 0;
-			file.read((char*)&mode, 1);
-			if(mode != 0x00){
-				logger.err("Unsupported world mode 0x" + to_string(mode) + " in: " + filename);
-				return;
-			}
-
-			// World boundaries
-			uint8_t bounds[6];
-			file.read((char*)bounds, 6);
-			sizeX = (bounds[0] << 8) | bounds[1];
-			sizeY = (bounds[2] << 8) | bounds[3];
-			sizeZ = (bounds[4] << 8) | bounds[5];
-			blocks.assign(sizeX * sizeY * sizeZ, 0x00);
-
-			// Block array
-			int chunksX = (sizeX + 15) / 16;
-			int chunksY = (sizeY + 15) / 16;
-			int chunksZ = (sizeZ + 15) / 16;
-
-			for(int cy = 0; cy < chunksY; cy++)
-				for(int cz = 0; cz < chunksZ; cz++)
-					for(int cx = 0; cx < chunksX; cx++)
-						for(int ly = 0; ly < 16; ly++)
-							for(int lz = 0; lz < 16; lz++)
-								for(int lx = 0; lx < 16; lx++){
-									uint8_t id = 0;
-									file.read((char*)&id, 1);
-									int wx = cx*16 + lx;
-									int wy = cy*16 + ly;
-									int wz = cz*16 + lz;
-									if(wx < sizeX && wy < sizeY && wz < sizeZ)
-										setBlock(wx, wy, wz, id);
-								}
-
-			file.close();
-			logger.info("Level loaded from " + filename);
-		}
+        file.close();
+        logger.info("Level loaded from " + filename + " (" + std::to_string(blocks.size()) + " blocks)");
+    }
 };
 /*
    class InfiniteLevel {
@@ -443,94 +396,64 @@ void flush(){
 };*/
 
 class LevelRegistry {
-	public:
-		mutex registryMutex;
-		// map<string, InfiniteLevel*> infiniteLevels;
+public:
+    std::mutex registryMutex;
+    std::map<std::string, Level*> levels;
 
-		Level* getOrLoad(const string& name, bool generate = false){
-			lock_guard<mutex> lock(registryMutex);
-			auto it = levels.find(name);
-			if(it != levels.end()) return it->second;
+    Level* getOrLoad(const std::string& name, bool generate = false) {
+        lock_guard<std::mutex> lock(registryMutex);
+        auto it = levels.find(name);
+        if (it != levels.end()) return it->second;
 
-			string path = "maps/" + name + ".lvl";
-			ifstream check(path);
-			if(check.good()){
-				check.close();
-				Level* lvl = new Level(256, 64, 256);
-				lvl->load(path);
-				levels[name] = lvl;
-				logger.info("Loaded level: " + name);
-				return lvl;
-			}
+        // Get world record
+        WorldRecord worldRec;
+        if (!worldDB.getByName(name, worldRec)) {
+            if (!generate) return nullptr;
+            // Create new world
+            worldRec.rowid = worldDB.createWorld(name, 256, 64, 256);
+            if (worldRec.rowid < 0) return nullptr;
+            worldRec.name = name;
+            worldRec.sizeX = 256;
+            worldRec.sizeY = 64;
+            worldRec.sizeZ = 256;
+        }
 
-			if(generate){
-				Level* lvl = new Level(256, 64, 256);
-				lvl->newFile();
-				lvl->save(path);
-				levels[name] = lvl;
-				logger.info("Generated new level: " + name);
-				return lvl;
-			}
+        Level* lvl = new Level(worldRec.sizeX, worldRec.sizeY, worldRec.sizeZ, worldRec.rowid);
 
-			return nullptr;
-		}
+        std::string path = "maps/" + name + ".lvl";
+        std::ifstream check(path);
+        if (check.good()) {
+            check.close();
+            lvl->load(path);
+        } else if (generate) {
+            lvl->newFile();
+            lvl->save(path);
+        } else {
+            delete lvl;
+            return nullptr;
+        }
 
-		void unloadIfEmpty(const string& name){
-			if(name == "main") return;
-			lock_guard<mutex> lock(registryMutex);
-			auto it = levels.find(name);
-			if(it == levels.end()) return;
-			it->second->save("maps/" + name + ".lvl");
-			delete it->second;
-			levels.erase(it);
-			logger.info("Unloaded level: " + name);
-		}
+        levels[name] = lvl;
+        logger.info("Loaded level: " + name);
+        return lvl;
+    }
 
-		void saveAll(){
-			lock_guard<mutex> lock(registryMutex);
-			for(auto& pair : levels)
-				pair.second->save("maps/" + pair.first + ".lvl");
-		}
+    void unloadIfEmpty(const std::string& name) {
+        if (name == "main") return;
+        lock_guard<std::mutex> lock(registryMutex);
+        auto it = levels.find(name);
+        if (it == levels.end()) return;
+        it->second->save("maps/" + name + ".lvl");
+        delete it->second;
+        levels.erase(it);
+        logger.info("Unloaded level: " + name);
+    }
 
-		vector<string> listAvailable(){
-			vector<string> result;
-			return result;
-		}
-
-		/*
-		   InfiniteLevel* getOrCreateInfinite(const string& name, uint64_t seed = 0){
-		   lock_guard<mutex> lock(registryMutex);
-		   auto it = infiniteLevels.find(name);
-		   if(it != infiniteLevels.end()) return it->second;
-
-		   string path = "maps/" + name + ".lvl";
-		   ifstream check(path);
-		   InfiniteLevel* il;
-		   if(check.good()){
-		   check.close();
-		   il = InfiniteLevel::loadExisting(path);
-		   } else {
-		   if(seed == 0){
-		   random_device rd;
-		   seed = ((uint64_t)rd() << 32) | rd();
-		   }
-		   il = InfiniteLevel::createNew(path, seed);
-		   }
-		   if(il) infiniteLevels[name] = il;
-		   return il;
-		   }
-
-		   bool isInfinite(const string& name){
-		   lock_guard<mutex> lock(registryMutex);
-		   return infiniteLevels.count(name) > 0;
-		   }
-
-		   void saveAllInfinite(){
-		// no lock here — flush() locks internally
-		for(auto& pair : infiniteLevels) pair.second->flush();
-		}*/
-
-		map<string, Level*> levels;
+    void saveAll() {
+        lock_guard<std::mutex> lock(registryMutex);
+        for (auto& pair : levels)
+            pair.second->save("maps/" + pair.first + ".lvl");
+    }
 };
 
 // util
