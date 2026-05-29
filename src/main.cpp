@@ -42,6 +42,7 @@
 #include "conf.hpp"
 #include "playerdb.hpp"
 #include "blocklog.hpp"
+#include "worlddb.hpp"
 
 #include "globals.h"
 
@@ -246,7 +247,14 @@ void handlePlayer(SOCKET clientSocket){
 
 					  uint8_t newBlock = (mode == 0x01) ? blockType : 0x00;
 					  Level* lvl = levelRegistry.getOrLoad(player->currentLevel);
-					  if(lvl) lvl->setBlock(bx, by, bz, newBlock);
+
+					  if(lvl) {
+						lvl->addBlock(bx, by, bz, newBlock);
+
+						int64_t playerRowid = 0;
+        				playerDB.findPlayerRowid(player->username, playerRowid);
+        				blockLog.logBlockChange(playerRowid, lvl->worldId, newBlock);
+					  }
 
 					  blockLog.logBlockChange(playerRowid, newBlock);
 
